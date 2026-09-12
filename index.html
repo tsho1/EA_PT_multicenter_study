@@ -755,10 +755,12 @@ function renderForm(){
   const p = progress(r);
 
   const oos = outOfScope(r);
-  const secs = oos ? SECTIONS.filter(s => s.id === "base") : SECTIONS;
+  /* 多段階手術例（stage）は副次評価項目⑥の対象なので全セクションを表示する */
+  const hideSec = !!oos && oos.kind !== "stage";
+  const secs = hideSec ? SECTIONS.filter(s => s.id === "base") : SECTIONS;
   const allOpen = secs.every(s => openSec[s.id]);
   main.append(el("div",{class:"jump"},
-    oos ? null : el("button",{onclick:()=>{ secs.forEach(s => openSec[s.id] = !allOpen); render(); }}, allOpen ? "すべて閉じる" : "すべて開く"),
+    hideSec ? null : el("button",{onclick:()=>{ secs.forEach(s => openSec[s.id] = !allOpen); render(); }}, allOpen ? "すべて閉じる" : "すべて開く"),
     secs.map(s => {
       const vis = s.fields.map(f => BYKEY[f[0]]).filter(f => visible(f,r) && f.type !== "c");
       const d = vis.filter(f => filled(f,r)).length;

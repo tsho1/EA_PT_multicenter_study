@@ -325,10 +325,10 @@ const SECTIONS = [
   { id:"base", name:"基本情報・適格性", note:"患者氏名・カルテ番号・生年月日は入力しないでください。日付はすべて<b>日齢</b>（出生日＝0日目）でご記入ください。<br>まずこの欄の適格性をご判定ください。<b>対象外と判定された場合は、以降の項目は表示されず入力不要になります。</b>", fields:[
     ["caseId","症例番号（施設内の通し番号）","t",null,null,{req:1,help:"1, 2, 3… の通し番号です。症例を追加すると自動で入ります。カルテ番号・氏名は入力しないでください。"}],
     ["site","施設名","s",SITES,null,{req:1}],
-    ["inc1","選択基準① Gross分類C型・対象期間内（2014/1/1–2025/12/31）に食道閉鎖根治術を施行","s",YN,null,{help:"一期的根治術・多段階手術のいずれも「はい」です（多段階かどうかは除外基準②で判定します）"}],
+    ["inc1","選択基準① Gross分類C型・一期的根治術を対象期間内（2014/1/1–2025/12/31）に施行","s",YN],
     ["inc2","選択基準② 生後6か月の呼吸状況が確認可能","s",YN],
     ["exc1","除外基準① Gross分類C型以外に該当","s",YN],
-    ["exc2","除外基準② 多段階手術を施行（一期的根治せず）","s",YN,null,{help:"「はい」の場合も対象です。主解析からは除外しますが、副次評価項目⑥（拡大コホート）に用いるため全項目のご記入をお願いします"}],
+    ["exc2","除外基準② 多段階手術を施行（一期的根治せず）","s",YN],
     ["exc3","除外基準③ 二次性気管軟化（血管輪等）に該当","s",YN],
     ["exc4","除外基準④ 食道閉鎖根治術と同時に後方気管固定術等の気道安定化手術を併施","s",YN],
     ["exc5","除外基準⑤ 気管軟化と無関係の理由で月齢6未満に死亡／追跡不能","s",YN]
@@ -344,7 +344,7 @@ const SECTIONS = [
     ["gen","遺伝性疾患・染色体疾患の有無","s",AN3],
     ["genD","遺伝性疾患・染色体疾患の詳細（任意）","t",null,["gen","あり"]]
   ]},
-  { id:"uedr", name:"UEDR（上部食道拡張度）", note:"<b>診断時（初回手術前）</b>の胸部単純写真で計測してください。一期的根治例では根治術前の画像と実質的に同一です。多段階手術例でも同じ時点で計測することで比較が可能になります。実測値2つを入力すると比が自動計算されます（Tröbs et al. Acta Paediatr 2018 の手法を参考にしています）。", fields:[
+  { id:"uedr", name:"UEDR（上部食道拡張度）", note:"<b>診断時（初回手術前）</b>の胸部単純写真で計測してください。本研究の対象は一期的根治例のみで、食道閉鎖根治術は生後数日以内に行われるため、これは根治術前の画像と実質的に同一です。実測値2つを入力すると比が自動計算されます（Tröbs et al. Acta Paediatr 2018 の手法を参考にしています）。", fields:[
     ["ue","上部食道盲端最大横径(mm)","n",null,null,{flag:1}],
     ["tv","第一胸椎横径(mm)","n",null,null,{flag:1}],
     ["uedr","UEDR（自動計算）","c",null,null,{flag:1,num:"ue",den:"tv",dp:3}]
@@ -364,17 +364,17 @@ const SECTIONS = [
     ["cx","根治術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN3],
     ["cxD","根治術後合併症　詳細（自由記載）","t",null,["cx","あり"]]
   ]},
-  { id:"resp", name:"呼吸イベント", note:"<b>Grade判定は行いません。</b>各項目の「有無」と「日齢」のみご記入ください。Grade分類は研究代表施設（埼玉県立小児医療センター）が一括して行います。同一項目に複数エピソードがある場合は初回の日齢を入力し、備考に追加分をご記入ください。", fields:[
-    ["imv","予定外の気管内挿管・侵襲的人工呼吸管理の有無","s",AN],
+  { id:"resp", name:"呼吸イベント", note:"<b>Grade判定は行いません。</b>各項目の「有無」と「日齢」のみご記入ください。Grade分類は研究代表施設（埼玉県立小児医療センター）が一括して行います。同一項目に複数エピソードがある場合は初回の日齢を入力し、備考に追加分をご記入ください。<br><b>呼吸補助は、食道閉鎖根治術より後に生じたものをイベントとして評価します。</b>低出生体重児では呼吸窮迫症候群等により根治術前から挿管やCPAP/HFNCを要することがありますが、これらはイベントに含めません。ただし<b>日齢は実際の値をそのままご記入ください</b>。術前の期間を除いた日数の算出は研究代表施設が行います。", fields:[
+    ["imv","予定外の気管内挿管・侵襲的人工呼吸管理の有無","s",AN,null,{help:"食道閉鎖根治術後に一度抜管された後、新たに要した侵襲的人工呼吸管理が対象です。根治術前（出生直後のRDS等）の挿管管理は含めません"}],
     ["imvS","侵襲的人工呼吸管理 開始日齢(日)","n",null,["imv","あり"],{day:1}],
     ["imvE","侵襲的人工呼吸管理 終了日齢(日：抜管日)","n",null,["imv","あり"],{day:1,pair:"imvS",help:"継続中は空欄"}],
     ["rei","初回抜管後の再挿管の有無","s",AN],
     ["reiS","再挿管 日齢(日)","n",null,["rei","あり"],{day:1}],
     ["reiE","再挿管後の抜管 日齢(日)","n",null,["rei","あり"],{day:1,pair:"reiS",help:"継続中は空欄"}],
-    ["niv","CPAP/NPPV/HFNCによる呼吸補助の有無","s",AN,null,{help:"CPAP・NPPV・HFNCはいずれもGrade 3に相当するため、デバイスを区別せずまとめてご記入ください"}],
-    ["nivS","CPAP/NPPV/HFNC 開始日齢(日)","n",null,["niv","あり"],{day:1,help:"最初に開始した日齢"}],
+    ["niv","CPAP/NPPV/HFNCによる呼吸補助の有無","s",AN,null,{help:"CPAP・NPPV・HFNCはいずれもGrade 3に相当するため、デバイスを区別せずまとめてご記入ください。食道閉鎖根治術より前から使用していた場合も「あり」としてご記入ください（イベント判定に用いる日数は根治術後の分のみを代表施設で算出します）"}],
+    ["nivS","CPAP/NPPV/HFNC 開始日齢(日)","n",null,["niv","あり"],{day:1,help:"最初に開始した日齢。食道閉鎖根治術より前に開始していた場合も、実際の開始日齢をそのままご記入ください"}],
     ["nivE","CPAP/NPPV/HFNC 終了日齢(日)","n",null,["niv","あり"],{day:1,pair:"nivS",help:"このエピソードが終了した日齢。離脱過程で48時間未満の中断をはさんで別のデバイスへ移行した場合は、中断を含めて1つのエピソードとして通算してください。継続中は空欄"}],
-    ["nivMore1","ほかにCPAP/NPPV/HFNCのエピソードがあるか","s",AN,["niv","あり"],{help:"48時間以上の中断をはさんで再導入された場合は別エピソードです。「なし」を選ぶと以降の欄は不要になります"}],
+    ["nivMore1","ほかにCPAP/NPPV/HFNCのエピソードがあるか","s",AN,["niv","あり"],{help:"48時間以上の中断をはさんで再導入された場合は別エピソードです。「なし」を選ぶと以降の欄は自動的に非表示になります"}],
     ["nivS2","CPAP/NPPV/HFNC エピソード2 開始日齢(日)","n",null,["nivMore1","あり"],{day:1}],
     ["nivE2","CPAP/NPPV/HFNC エピソード2 終了日齢(日)","n",null,["nivMore1","あり"],{day:1,pair:"nivS2",help:"継続中は空欄"}],
     ["nivMore2","さらにCPAP/NPPV/HFNCのエピソードがあるか","s",AN,["nivMore1","あり"]],
@@ -405,7 +405,7 @@ const SECTIONS = [
     ["oth1ReiExt","手術1：再挿管後の抜管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(1),{day:1,pair:"oth1ReiAge",help:"継続中は空欄"}],
     ["oth1Cx","手術1：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN3,othShow(1)],
     ["oth1CxD","手術1：術後合併症　詳細（自由記載）","t",null,othCxShow(1)],
-    ["othMore1","手術1のほかに、さらに根治術以外の手術があるか","s",AN,othShow(1),{help:"「なし」を選ぶと手術2以降の欄は不要になります"}],
+    ["othMore1","手術1のほかに、さらに根治術以外の手術があるか","s",AN,othShow(1),{help:"「なし」を選ぶと手術2以降の欄は自動的に非表示になります"}],
     ["oth2Name","手術2：術式（自由記載）","t",null,othShow(2)],
     ["oth2Age","手術2：手術日齢(日)","n",null,othShow(2),{day:1}],
     ["oth2Ext","手術2：術後の抜管日齢(日)","n",null,othShow(2),{day:1,pair:"oth2Age",help:"継続中は空欄"}],
@@ -414,7 +414,7 @@ const SECTIONS = [
     ["oth2ReiExt","手術2：再挿管後の抜管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(2),{day:1,pair:"oth2ReiAge",help:"継続中は空欄"}],
     ["oth2Cx","手術2：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN3,othShow(2)],
     ["oth2CxD","手術2：術後合併症　詳細（自由記載）","t",null,othCxShow(2)],
-    ["othMore2","手術2のほかに、さらに根治術以外の手術があるか","s",AN,othShow(2),{help:"「なし」を選ぶと手術3以降の欄は不要になります"}],
+    ["othMore2","手術2のほかに、さらに根治術以外の手術があるか","s",AN,othShow(2),{help:"「なし」を選ぶと手術3以降の欄は自動的に非表示になります"}],
     ["oth3Name","手術3：術式（自由記載）","t",null,othShow(3)],
     ["oth3Age","手術3：手術日齢(日)","n",null,othShow(3),{day:1}],
     ["oth3Ext","手術3：術後の抜管日齢(日)","n",null,othShow(3),{day:1,pair:"oth3Age",help:"継続中は空欄"}],
@@ -423,7 +423,7 @@ const SECTIONS = [
     ["oth3ReiExt","手術3：再挿管後の抜管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(3),{day:1,pair:"oth3ReiAge",help:"継続中は空欄"}],
     ["oth3Cx","手術3：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN3,othShow(3)],
     ["oth3CxD","手術3：術後合併症　詳細（自由記載）","t",null,othCxShow(3)],
-    ["othMore3","手術3のほかに、さらに根治術以外の手術があるか","s",AN,othShow(3),{help:"「なし」を選ぶと手術4以降の欄は不要になります"}],
+    ["othMore3","手術3のほかに、さらに根治術以外の手術があるか","s",AN,othShow(3),{help:"「なし」を選ぶと手術4以降の欄は自動的に非表示になります"}],
     ["oth4Name","手術4：術式（自由記載）","t",null,othShow(4)],
     ["oth4Age","手術4：手術日齢(日)","n",null,othShow(4),{day:1}],
     ["oth4Ext","手術4：術後の抜管日齢(日)","n",null,othShow(4),{day:1,pair:"oth4Age",help:"継続中は空欄"}],
@@ -432,7 +432,7 @@ const SECTIONS = [
     ["oth4ReiExt","手術4：再挿管後の抜管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(4),{day:1,pair:"oth4ReiAge",help:"継続中は空欄"}],
     ["oth4Cx","手術4：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN3,othShow(4)],
     ["oth4CxD","手術4：術後合併症　詳細（自由記載）","t",null,othCxShow(4)],
-    ["othMore4","手術4のほかに、さらに根治術以外の手術があるか","s",AN,othShow(4),{help:"「なし」を選ぶと手術5の欄は不要になります"}],
+    ["othMore4","手術4のほかに、さらに根治術以外の手術があるか","s",AN,othShow(4),{help:"「なし」を選ぶと手術5の欄は自動的に非表示になります"}],
     ["oth5Name","手術5：術式（自由記載）","t",null,othShow(5)],
     ["oth5Age","手術5：手術日齢(日)","n",null,othShow(5),{day:1}],
     ["oth5Ext","手術5：術後の抜管日齢(日)","n",null,othShow(5),{day:1,pair:"oth5Age",help:"継続中は空欄"}],
@@ -544,15 +544,13 @@ function num(v){
   const n = Number(v); return isFinite(n) ? n : null;
 }
 /* 適格性の判定。
-   選択基準①②を満たさない、または除外基準①③⑤に該当する症例は、
+   選択基準①②を満たさない、または除外基準①②③⑤に該当する症例は、
    主解析・副次評価・感度解析のいずれにも用いないため、以降の項目は入力不要とする。
-   除外基準②（多段階手術）該当例は主解析からは除外するが、副次評価項目⑥
-   （多段階手術例を含む拡大コホートにおける探索的解析）の対象となるため、
-   通常の症例と同様に全項目を入力していただく。
    除外基準④該当例は主解析からは除外するが選択バイアス評価の感度解析に用いるため、
    「除外例④」タブへの記入に誘導する。 */
 const EXC_LABELS = [
   ["exc1","①Gross分類C型以外"],
+  ["exc2","②多段階手術（一期的根治せず）"],
   ["exc3","③二次性気管軟化（血管輪等）"],
   ["exc5","⑤気管軟化と無関係の死亡・追跡不能"]
 ];
@@ -563,12 +561,10 @@ function outOfScope(r){
     if(r[k] === "はい") return {kind:"out", why:"除外基準" + t + "に該当します"};
   }
   if(r.exc4 === "はい") return {kind:"excl4", why:"除外基準④に該当します"};
-  if(r.exc2 === "はい") return {kind:"stage", why:"多段階手術例です"};
   return null;
 }
 function visible(f, r){
-  const o = outOfScope(r);
-  if(f.sec && f.sec !== "base" && o && o.kind !== "stage") return false;
+  if(f.sec && f.sec !== "base" && outOfScope(r)) return false;
   if(!f.cond) return true;
   if(typeof f.cond === "function") return !!f.cond(r);
   return r[f.cond[0]] === f.cond[1];
@@ -594,7 +590,6 @@ function validate(r){
   if(v("inc2") === "いいえ") add("warn","inc2","選択基準②を満たさないため対象外です");
   EXC_LABELS.forEach(([k,t]) => { if(v(k) === "はい") add("warn", k, "除外基準"+t+"に該当するため対象外です"); });
   if(v("exc4") === "はい") add("warn","exc4","「除外例④」タブへのご記入をお願いします");
-  if(v("exc2") === "はい" && v("exc4") !== "はい") add("warn","exc2","多段階手術例です。副次評価項目⑥に用いるため、以降の項目もご記入ください");
 
   const rng = (k,lo,hi,unit) => { const x = n(k); if(x !== null && (x < lo || x > hi)) add("warn", k, "通常は "+lo+"–"+hi+unit+" の範囲です。お確かめください"); };
   rng("bw",300,6000,"g"); rng("ga",20,42,"週"); rng("gad",0,6,"日");
@@ -701,8 +696,6 @@ function renderCases(){
       const right = el("div",{class:"cright"});
       if(c._sample) right.append(el("span",{class:"chip sample"},"サンプル"));
       else if(oos && oos.kind === "excl4") right.append(el("span",{class:"chip warn"},"除外例④"));
-      else if(oos && oos.kind === "stage" && g && g.c) right.append(el("span",{class:"chip crit"},"要確認 "+g.c));
-      else if(oos && oos.kind === "stage") right.append(el("span",{class:"chip warn"},"多段階"));
       else if(oos) right.append(el("span",{class:"chip muted"},"対象外"));
       else if(g && g.c) right.append(el("span",{class:"chip crit"},"要確認 "+g.c));
       else if(g && g.w) right.append(el("span",{class:"chip warn"},"確認 "+g.w));
@@ -755,12 +748,10 @@ function renderForm(){
   const p = progress(r);
 
   const oos = outOfScope(r);
-  /* 多段階手術例（stage）は副次評価項目⑥の対象なので全セクションを表示する */
-  const hideSec = !!oos && oos.kind !== "stage";
-  const secs = hideSec ? SECTIONS.filter(s => s.id === "base") : SECTIONS;
+  const secs = oos ? SECTIONS.filter(s => s.id === "base") : SECTIONS;
   const allOpen = secs.every(s => openSec[s.id]);
   main.append(el("div",{class:"jump"},
-    hideSec ? null : el("button",{onclick:()=>{ secs.forEach(s => openSec[s.id] = !allOpen); render(); }}, allOpen ? "すべて閉じる" : "すべて開く"),
+    oos ? null : el("button",{onclick:()=>{ secs.forEach(s => openSec[s.id] = !allOpen); render(); }}, allOpen ? "すべて閉じる" : "すべて開く"),
     secs.map(s => {
       const vis = s.fields.map(f => BYKEY[f[0]]).filter(f => visible(f,r) && f.type !== "c");
       const d = vis.filter(f => filled(f,r)).length;
@@ -773,9 +764,6 @@ function renderForm(){
   if(oos && oos.kind === "out"){
     main.append(el("div",{class:"banner warn"},
       el("div",{html:"<b>この症例は対象外です（" + oos.why + "）。</b>主解析・副次評価・感度解析のいずれにも用いないため、<b>以降の項目の入力は不要です。</b>このまま保存して次の症例へお進みください。"})));
-  } else if(oos && oos.kind === "stage"){
-    main.append(el("div",{class:"banner info"},
-      el("div",{html:"<b>多段階手術例です。</b>主解析（一期的根治例に限定）からは除外しますが、<b>副次評価項目⑥（多段階手術例を含む拡大コホートの解析）の対象</b>となります。<b>以降の項目も通常どおりご記入ください。</b><br>UEDRは<b>診断時（初回手術前）</b>の胸部単純写真で計測し、根治術日齢には<b>食道閉鎖根治術（吻合）の日齢</b>をご記入ください（胃瘻造設等の日齢ではありません）。"})));
   } else if(oos && oos.kind === "excl4"){
     main.append(el("div",{class:"banner info"},
       el("div",{html:"<b>除外基準④に該当します。</b>主解析からは除外しますが、<b>選択バイアスを評価する感度解析に用いるため</b>「除外例④」タブへのご記入をお願いします。この画面での以降の項目の入力は不要です。"}),
@@ -1018,8 +1006,7 @@ function renderExport(){
   const live = rows.filter(r => !outOfScope(r)).length;
   const outN = rows.filter(r => { const o = outOfScope(r); return o && o.kind === "out"; }).length;
   const e4 = rows.filter(r => { const o = outOfScope(r); return o && o.kind === "excl4"; }).length;
-  const stg = rows.filter(r => { const o = outOfScope(r); return o && o.kind === "stage"; }).length;
-  body.append(el("div",{class:"note", html:"内訳：<b>主解析対象 " + live + " 件</b> ／ 多段階手術（副次⑥対象） " + stg + " 件 ／ 除外基準④ " + e4 + " 件 ／ 対象外 " + outN + " 件。<b>対象外の症例も書き出しに含めます</b>（何例をスクリーニングし何例を除外したかの記録として必要なため）。"}));
+  body.append(el("div",{class:"note", html:"内訳：<b>解析対象 " + live + " 件</b> ／ 対象外 " + outN + " 件 ／ 除外基準④ " + e4 + " 件。<b>対象外の症例も書き出しに含めます</b>（何例をスクリーニングし何例を除外したかの記録として必要なため）。"}));
   card.append(body);
   main.append(card);
 

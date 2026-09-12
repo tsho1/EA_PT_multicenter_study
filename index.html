@@ -325,12 +325,12 @@ const SECTIONS = [
   { id:"base", name:"基本情報・適格性", note:"患者氏名・カルテ番号・生年月日は入力しないでください。日付はすべて<b>日齢</b>（出生日＝0日目）でご記入ください。<br>まずこの欄の適格性をご判定ください。<b>対象外と判定された場合は、以降の項目は表示されず入力不要になります。</b>", fields:[
     ["caseId","症例番号（施設内の通し番号）","t",null,null,{req:1,help:"1, 2, 3… の通し番号です。症例を追加すると自動で入ります。カルテ番号・氏名は入力しないでください。"}],
     ["site","施設名","s",SITES,null,{req:1}],
-    ["inc1","選択基準① Gross分類C型・一期的根治術を対象期間内（2014/1/1–2025/12/31）に施行","s",YN],
+    ["inc1","選択基準① Gross分類C型・対象期間内（2014/1/1–2025/12/31）に食道閉鎖根治術を施行","s",YN,null,{help:"一期的根治術・多段階手術のいずれも「はい」です（多段階かどうかは除外基準②で判定します）"}],
     ["inc2","選択基準② 生後6か月の呼吸状況が確認可能","s",YN],
     ["exc1","除外基準① Gross分類C型以外に該当","s",YN],
-    ["exc2","除外基準② 多段階手術を施行（一期的根治せず）","s",YN],
+    ["exc2","除外基準② 多段階手術を施行（一期的根治せず）","s",YN,null,{help:"「はい」の場合も対象です。主解析からは除外しますが、副次評価項目⑥（拡大コホート）に用いるため全項目のご記入をお願いします"}],
     ["exc3","除外基準③ 二次性気管軟化（血管輪等）に該当","s",YN],
-    ["exc4","除外基準④ 初回根治術と同時に後方気管固定術等の気道安定化手術を併施","s",YN],
+    ["exc4","除外基準④ 食道閉鎖根治術と同時に後方気管固定術等の気道安定化手術を併施","s",YN],
     ["exc5","除外基準⑤ 気管軟化と無関係の理由で月齢6未満に死亡／追跡不能","s",YN]
   ]},
   { id:"bg", name:"背景因子", fields:[
@@ -344,7 +344,7 @@ const SECTIONS = [
     ["gen","遺伝性疾患・染色体疾患の有無","s",AN3],
     ["genD","遺伝性疾患・染色体疾患の詳細（任意）","t",null,["gen","あり"]]
   ]},
-  { id:"uedr", name:"UEDR（上部食道拡張度）", note:"根治術<b>前</b>レントゲンで計測。実測値2つを入力すると比が自動計算されます（Tröbs et al. Acta Paediatr 2018 の手法を参考にしています）。", fields:[
+  { id:"uedr", name:"UEDR（上部食道拡張度）", note:"<b>診断時（初回手術前）</b>の胸部単純写真で計測してください。一期的根治例では根治術前の画像と実質的に同一です。多段階手術例でも同じ時点で計測することで比較が可能になります。実測値2つを入力すると比が自動計算されます（Tröbs et al. Acta Paediatr 2018 の手法を参考にしています）。", fields:[
     ["ue","上部食道盲端最大横径(mm)","n",null,null,{flag:1}],
     ["tv","第一胸椎横径(mm)","n",null,null,{flag:1}],
     ["uedr","UEDR（自動計算）","c",null,null,{flag:1,num:"ue",den:"tv",dp:3}]
@@ -544,13 +544,15 @@ function num(v){
   const n = Number(v); return isFinite(n) ? n : null;
 }
 /* 適格性の判定。
-   選択基準①②を満たさない、または除外基準①②③⑤に該当する症例は、
+   選択基準①②を満たさない、または除外基準①③⑤に該当する症例は、
    主解析・副次評価・感度解析のいずれにも用いないため、以降の項目は入力不要とする。
+   除外基準②（多段階手術）該当例は主解析からは除外するが、副次評価項目⑥
+   （多段階手術例を含む拡大コホートにおける探索的解析）の対象となるため、
+   通常の症例と同様に全項目を入力していただく。
    除外基準④該当例は主解析からは除外するが選択バイアス評価の感度解析に用いるため、
    「除外例④」タブへの記入に誘導する。 */
 const EXC_LABELS = [
   ["exc1","①Gross分類C型以外"],
-  ["exc2","②多段階手術（一期的根治せず）"],
   ["exc3","③二次性気管軟化（血管輪等）"],
   ["exc5","⑤気管軟化と無関係の死亡・追跡不能"]
 ];
@@ -561,10 +563,12 @@ function outOfScope(r){
     if(r[k] === "はい") return {kind:"out", why:"除外基準" + t + "に該当します"};
   }
   if(r.exc4 === "はい") return {kind:"excl4", why:"除外基準④に該当します"};
+  if(r.exc2 === "はい") return {kind:"stage", why:"多段階手術例です"};
   return null;
 }
 function visible(f, r){
-  if(f.sec && f.sec !== "base" && outOfScope(r)) return false;
+  const o = outOfScope(r);
+  if(f.sec && f.sec !== "base" && o && o.kind !== "stage") return false;
   if(!f.cond) return true;
   if(typeof f.cond === "function") return !!f.cond(r);
   return r[f.cond[0]] === f.cond[1];
@@ -590,6 +594,7 @@ function validate(r){
   if(v("inc2") === "いいえ") add("warn","inc2","選択基準②を満たさないため対象外です");
   EXC_LABELS.forEach(([k,t]) => { if(v(k) === "はい") add("warn", k, "除外基準"+t+"に該当するため対象外です"); });
   if(v("exc4") === "はい") add("warn","exc4","「除外例④」タブへのご記入をお願いします");
+  if(v("exc2") === "はい" && v("exc4") !== "はい") add("warn","exc2","多段階手術例です。副次評価項目⑥に用いるため、以降の項目もご記入ください");
 
   const rng = (k,lo,hi,unit) => { const x = n(k); if(x !== null && (x < lo || x > hi)) add("warn", k, "通常は "+lo+"–"+hi+unit+" の範囲です。お確かめください"); };
   rng("bw",300,6000,"g"); rng("ga",20,42,"週"); rng("gad",0,6,"日");
@@ -696,6 +701,8 @@ function renderCases(){
       const right = el("div",{class:"cright"});
       if(c._sample) right.append(el("span",{class:"chip sample"},"サンプル"));
       else if(oos && oos.kind === "excl4") right.append(el("span",{class:"chip warn"},"除外例④"));
+      else if(oos && oos.kind === "stage" && g && g.c) right.append(el("span",{class:"chip crit"},"要確認 "+g.c));
+      else if(oos && oos.kind === "stage") right.append(el("span",{class:"chip warn"},"多段階"));
       else if(oos) right.append(el("span",{class:"chip muted"},"対象外"));
       else if(g && g.c) right.append(el("span",{class:"chip crit"},"要確認 "+g.c));
       else if(g && g.w) right.append(el("span",{class:"chip warn"},"確認 "+g.w));
@@ -764,6 +771,9 @@ function renderForm(){
   if(oos && oos.kind === "out"){
     main.append(el("div",{class:"banner warn"},
       el("div",{html:"<b>この症例は対象外です（" + oos.why + "）。</b>主解析・副次評価・感度解析のいずれにも用いないため、<b>以降の項目の入力は不要です。</b>このまま保存して次の症例へお進みください。"})));
+  } else if(oos && oos.kind === "stage"){
+    main.append(el("div",{class:"banner info"},
+      el("div",{html:"<b>多段階手術例です。</b>主解析（一期的根治例に限定）からは除外しますが、<b>副次評価項目⑥（多段階手術例を含む拡大コホートの解析）の対象</b>となります。<b>以降の項目も通常どおりご記入ください。</b><br>UEDRは<b>診断時（初回手術前）</b>の胸部単純写真で計測し、根治術日齢には<b>食道閉鎖根治術（吻合）の日齢</b>をご記入ください（胃瘻造設等の日齢ではありません）。"})));
   } else if(oos && oos.kind === "excl4"){
     main.append(el("div",{class:"banner info"},
       el("div",{html:"<b>除外基準④に該当します。</b>主解析からは除外しますが、<b>選択バイアスを評価する感度解析に用いるため</b>「除外例④」タブへのご記入をお願いします。この画面での以降の項目の入力は不要です。"}),
@@ -928,7 +938,7 @@ function renderSite(){
 
 /* ---- 除外例一覧 ---- */
 function renderExcl(){
-  main.append(el("div",{class:"banner info", html:"初回根治術と<b>同時に</b>後方気管固定術または大動脈前方つり上げ術を併施した症例（除外基準④該当例）をご記入ください。主解析からは除外しますが、<b>選択バイアスを評価する感度解析</b>に必要です。該当例がない施設は空欄で構いません。"}));
+  main.append(el("div",{class:"banner info", html:"食道閉鎖根治術と<b>同時に</b>後方気管固定術または大動脈前方つり上げ術を併施した症例（除外基準④該当例）をご記入ください。主解析からは除外しますが、<b>選択バイアスを評価する感度解析</b>に必要です。該当例がない施設は空欄で構いません。"}));
   const card = el("div",{class:"card"});
   card.append(el("h2",{},"除外例一覧（除外基準④）", el("span",{class:"count"}, store.excl.length + " 件")));
   const body = el("div",{class:"body"});
@@ -1006,7 +1016,8 @@ function renderExport(){
   const live = rows.filter(r => !outOfScope(r)).length;
   const outN = rows.filter(r => { const o = outOfScope(r); return o && o.kind === "out"; }).length;
   const e4 = rows.filter(r => { const o = outOfScope(r); return o && o.kind === "excl4"; }).length;
-  body.append(el("div",{class:"note", html:"内訳：<b>解析対象 " + live + " 件</b> ／ 対象外 " + outN + " 件 ／ 除外基準④ " + e4 + " 件。<b>対象外の症例も書き出しに含めます</b>（何例をスクリーニングし何例を除外したかの記録として必要なため）。"}));
+  const stg = rows.filter(r => { const o = outOfScope(r); return o && o.kind === "stage"; }).length;
+  body.append(el("div",{class:"note", html:"内訳：<b>主解析対象 " + live + " 件</b> ／ 多段階手術（副次⑥対象） " + stg + " 件 ／ 除外基準④ " + e4 + " 件 ／ 対象外 " + outN + " 件。<b>対象外の症例も書き出しに含めます</b>（何例をスクリーニングし何例を除外したかの記録として必要なため）。"}));
   card.append(body);
   main.append(card);
 

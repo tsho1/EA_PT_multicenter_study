@@ -175,6 +175,9 @@ input.bad,select.bad{border-color:var(--crit)}
   background:var(--accent); border-color:var(--accent); color:var(--on-accent); font-weight:700;
 }
 .seg button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+/* 複数選択は選択済みが分かるよう枠を残す */
+.seg.multi button[aria-pressed="true"]::before{content:"✓ "; font-weight:700}
+.seg.multi button{font-size:13px; padding:7px 12px}
 /* 数値の選択肢は幅を揃えて並べる */
 .seg.num button{
   flex:1 0 auto; min-width:62px; padding-inline:10px; text-align:center;
@@ -276,7 +279,7 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:20px 0}
   <div class="top-in">
     <div class="brand">
       <h1>EA呼吸イベント登録</h1>
-      <span class="sub">v2.7 · 2026-09-12 · SCMC</span>
+      <span class="sub">v3.0 · 2026-09-12 · SCMC</span>
     </div>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" id="tab-cases" aria-selected="true" data-view="cases">症例<span class="n" id="n-cases">0</span></button>
@@ -297,6 +300,15 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:20px 0}
 /* ════════ 1. 項目定義（列順＝配布Excel「入力シート」A〜CA列と一致） ════════ */
 const YN = ["はい","いいえ"];
 const AN = ["あり","なし"];
+/* 診療録に記載がなく判断できない場合に「なし」と区別するための3択。
+   主要アウトカムを構成するイベント（人工呼吸管理・再挿管・NIV・気道安定化手術・死亡）には
+   用いず、あり／なしのみとする（不明とすると当該症例がアウトカム判定不能になるため）。 */
+const AN3 = ["あり","なし","不明"];
+/* 呼吸補助を要した理由は、発生したイベントごとに記入する */
+const CAUSES = ["気道虚脱","上気道病変","肺実質病変・BPD","心疾患・心不全","呼吸器感染","中枢性・神経筋疾患","吻合部合併症","胃食道逆流・誤嚥","その他・不明"];
+const BASES = ["気管支鏡所見","dying spell等の臨床所見","画像所見","主治医記載のみ"];
+const ifEvent = k => r => r[k] === "あり";
+const ifAirwaySurg = r => r.trach === "あり" || r.pt === "あり" || r.ao === "あり";
 /* 参加10施設（あいうえお順。清音→濁音の順で並べている） */
 const SITES = ["旭川医科大学","群馬小児","埼玉小児","順天堂大学","成育","天使","東京大学","道立子ども","名古屋大学","北海道大学"];
 
@@ -325,11 +337,11 @@ const SECTIONS = [
     ["bw","出生体重(g)","n"],
     ["ga","在胎週数(週)","n"],
     ["gad","在胎日数(0-6)","n"],
-    ["chd","主要先天性心疾患の有無","s",AN,null,{help:"動脈管開存など軽微なものは除き、治療介入を要した／血行動態的に有意なものを「あり」"}],
+    ["chd","主要先天性心疾患の有無","s",AN3,null,{help:"動脈管開存など軽微なものは除き、治療介入を要した／血行動態的に有意なものを「あり」"}],
     ["chdName","主要先天性心疾患　病名（自由記載）","t",null,["chd","あり"]],
-    ["bpd","気管支肺異形成（BPD）の有無","s",AN,null,{help:"貴施設の診断基準に基づき判定"}],
-    ["vac","VACTERL連合の有無","s",AN],
-    ["gen","遺伝性疾患・染色体疾患の有無","s",AN],
+    ["bpd","気管支肺異形成（BPD）の有無","s",AN3,null,{help:"貴施設の診断基準に基づき判定"}],
+    ["vac","VACTERL連合の有無","s",AN3],
+    ["gen","遺伝性疾患・染色体疾患の有無","s",AN3],
     ["genD","遺伝性疾患・染色体疾患の詳細（任意）","t",null,["gen","あり"]]
   ]},
   { id:"uedr", name:"UEDR（上部食道拡張度）", note:"根治術<b>前</b>レントゲンで計測。実測値2つを入力すると比が自動計算されます（Tröbs et al. Acta Paediatr 2018 の手法を参考にしています）。", fields:[
@@ -347,9 +359,9 @@ const SECTIONS = [
   { id:"post", name:"術後経過", fields:[
     ["extAge","根治術後初回抜管日齢(日)","n",null,null,{day:1,help:"抜管に至らず継続管理中の場合は空欄"}],
     ["extType","根治術後初回抜管の別","s",["待機的","安定後速やかに","抜管困難","自己抜管","不明"],null,{help:"初回抜管が計画外の自己（事故）抜管であった場合は「自己抜管」を選択。待機的挿管の後にさらに抜管困難であった場合は「抜管困難」を選択"}],
-    ["airw","気管軟化症以外の先天性気道異常・先天性肺／胸郭疾患の有無","s",AN,null,{help:"喉頭軟化症・気管狭窄・肺低形成・胸郭変形など"}],
+    ["airw","気管軟化症以外の先天性気道異常・先天性肺／胸郭疾患の有無","s",AN3,null,{help:"喉頭軟化症・気管狭窄・肺低形成・胸郭変形など"}],
     ["airwName","気管軟化症以外の先天性気道異常・先天性肺／胸郭疾患の病名（自由記載）","t",null,["airw","あり"]],
-    ["cx","根治術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN],
+    ["cx","根治術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN3],
     ["cxD","根治術後合併症　詳細（自由記載）","t",null,["cx","あり"]]
   ]},
   { id:"resp", name:"呼吸イベント", note:"<b>Grade判定は行いません。</b>各項目の「有無」と「日齢」のみご記入ください。Grade分類は研究代表施設（埼玉県立小児医療センター）が一括して行います。同一項目に複数エピソードがある場合は初回の日齢を入力し、備考に追加分をご記入ください。", fields:[
@@ -361,9 +373,15 @@ const SECTIONS = [
     ["reiE","再挿管後の抜管 日齢(日)","n",null,["rei","あり"],{day:1,pair:"reiS",help:"継続中は空欄"}],
     ["niv","CPAP/NPPV/HFNCによる呼吸補助の有無","s",AN,null,{help:"CPAP・NPPV・HFNCはいずれもGrade 3に相当するため、デバイスを区別せずまとめてご記入ください"}],
     ["nivS","CPAP/NPPV/HFNC 開始日齢(日)","n",null,["niv","あり"],{day:1,help:"最初に開始した日齢"}],
-    ["nivE","CPAP/NPPV/HFNC 終了日齢(日)","n",null,["niv","あり"],{day:1,pair:"nivS",help:"最後に終了した日齢。離脱過程で48時間未満の中断をはさんで別のデバイスへ移行した場合も、同一エピソードとして通算してください。継続中は空欄"}],
-    ["dcO2","退院時（または月齢6時点）の酸素投与継続の有無","s",AN],
-    ["hot","在宅酸素療法の有無","s",AN],
+    ["nivE","CPAP/NPPV/HFNC 終了日齢(日)","n",null,["niv","あり"],{day:1,pair:"nivS",help:"このエピソードが終了した日齢。離脱過程で48時間未満の中断をはさんで別のデバイスへ移行した場合は、中断を含めて1つのエピソードとして通算してください。継続中は空欄"}],
+    ["nivMore1","ほかにCPAP/NPPV/HFNCのエピソードがあるか","s",AN,["niv","あり"],{help:"48時間以上の中断をはさんで再導入された場合は別エピソードです。「なし」を選ぶと以降の欄は不要になります"}],
+    ["nivS2","CPAP/NPPV/HFNC エピソード2 開始日齢(日)","n",null,["nivMore1","あり"],{day:1}],
+    ["nivE2","CPAP/NPPV/HFNC エピソード2 終了日齢(日)","n",null,["nivMore1","あり"],{day:1,pair:"nivS2",help:"継続中は空欄"}],
+    ["nivMore2","さらにCPAP/NPPV/HFNCのエピソードがあるか","s",AN,["nivMore1","あり"]],
+    ["nivS3","CPAP/NPPV/HFNC エピソード3 開始日齢(日)","n",null,["nivMore2","あり"],{day:1}],
+    ["nivE3","CPAP/NPPV/HFNC エピソード3 終了日齢(日)","n",null,["nivMore2","あり"],{day:1,pair:"nivS3",help:"4件以上ある場合は備考欄にご記入ください。継続中は空欄"}],
+    ["dcO2","退院時（または月齢6時点）の酸素投与継続の有無","s",AN3],
+    ["hot","在宅酸素療法の有無","s",AN3],
     ["hotS","在宅酸素療法 開始日齢(日)","n",null,["hot","あり"],{day:1}],
     ["hotE","在宅酸素療法 終了日齢(日)","n",null,["hot","あり"],{day:1,pair:"hotS",help:"継続中は空欄"}],
     ["trach","気管切開の有無","s",AN],
@@ -382,37 +400,64 @@ const SECTIONS = [
     ["oth1Name","手術1：術式（自由記載）","t",null,othShow(1)],
     ["oth1Age","手術1：手術日齢(日)","n",null,othShow(1),{day:1}],
     ["oth1Ext","手術1：術後の抜管日齢(日)","n",null,othShow(1),{day:1,pair:"oth1Age",help:"術後に人工呼吸管理を要した場合にご記入ください。手術室で抜管した場合は手術日齢と同じ値で構いません。抜管に至らず継続中は空欄"}],
-    ["oth1Cx","手術1：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN,othShow(1)],
+    ["oth1Rei","手術1：術後に一度抜管された後の再挿管の有無","s",AN3,othShow(1),{help:"一度抜管された後の再挿管は、期間によらず呼吸器イベントとして扱うため必ずご記入ください"}],
+    ["oth1ReiAge","手術1：再挿管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(1),{day:1}],
+    ["oth1ReiExt","手術1：再挿管後の抜管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(1),{day:1,pair:"oth1ReiAge",help:"継続中は空欄"}],
+    ["oth1Cx","手術1：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN3,othShow(1)],
     ["oth1CxD","手術1：術後合併症　詳細（自由記載）","t",null,othCxShow(1)],
     ["othMore1","手術1のほかに、さらに根治術以外の手術があるか","s",AN,othShow(1),{help:"「なし」を選ぶと手術2以降の欄は不要になります"}],
     ["oth2Name","手術2：術式（自由記載）","t",null,othShow(2)],
     ["oth2Age","手術2：手術日齢(日)","n",null,othShow(2),{day:1}],
     ["oth2Ext","手術2：術後の抜管日齢(日)","n",null,othShow(2),{day:1,pair:"oth2Age",help:"継続中は空欄"}],
-    ["oth2Cx","手術2：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN,othShow(2)],
+    ["oth2Rei","手術2：術後に一度抜管された後の再挿管の有無","s",AN3,othShow(2)],
+    ["oth2ReiAge","手術2：再挿管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(2),{day:1}],
+    ["oth2ReiExt","手術2：再挿管後の抜管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(2),{day:1,pair:"oth2ReiAge",help:"継続中は空欄"}],
+    ["oth2Cx","手術2：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN3,othShow(2)],
     ["oth2CxD","手術2：術後合併症　詳細（自由記載）","t",null,othCxShow(2)],
     ["othMore2","手術2のほかに、さらに根治術以外の手術があるか","s",AN,othShow(2),{help:"「なし」を選ぶと手術3以降の欄は不要になります"}],
     ["oth3Name","手術3：術式（自由記載）","t",null,othShow(3)],
     ["oth3Age","手術3：手術日齢(日)","n",null,othShow(3),{day:1}],
     ["oth3Ext","手術3：術後の抜管日齢(日)","n",null,othShow(3),{day:1,pair:"oth3Age",help:"継続中は空欄"}],
-    ["oth3Cx","手術3：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN,othShow(3)],
+    ["oth3Rei","手術3：術後に一度抜管された後の再挿管の有無","s",AN3,othShow(3)],
+    ["oth3ReiAge","手術3：再挿管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(3),{day:1}],
+    ["oth3ReiExt","手術3：再挿管後の抜管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(3),{day:1,pair:"oth3ReiAge",help:"継続中は空欄"}],
+    ["oth3Cx","手術3：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN3,othShow(3)],
     ["oth3CxD","手術3：術後合併症　詳細（自由記載）","t",null,othCxShow(3)],
     ["othMore3","手術3のほかに、さらに根治術以外の手術があるか","s",AN,othShow(3),{help:"「なし」を選ぶと手術4以降の欄は不要になります"}],
     ["oth4Name","手術4：術式（自由記載）","t",null,othShow(4)],
     ["oth4Age","手術4：手術日齢(日)","n",null,othShow(4),{day:1}],
     ["oth4Ext","手術4：術後の抜管日齢(日)","n",null,othShow(4),{day:1,pair:"oth4Age",help:"継続中は空欄"}],
-    ["oth4Cx","手術4：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN,othShow(4)],
+    ["oth4Rei","手術4：術後に一度抜管された後の再挿管の有無","s",AN3,othShow(4)],
+    ["oth4ReiAge","手術4：再挿管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(4),{day:1}],
+    ["oth4ReiExt","手術4：再挿管後の抜管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(4),{day:1,pair:"oth4ReiAge",help:"継続中は空欄"}],
+    ["oth4Cx","手術4：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN3,othShow(4)],
     ["oth4CxD","手術4：術後合併症　詳細（自由記載）","t",null,othCxShow(4)],
     ["othMore4","手術4のほかに、さらに根治術以外の手術があるか","s",AN,othShow(4),{help:"「なし」を選ぶと手術5の欄は不要になります"}],
     ["oth5Name","手術5：術式（自由記載）","t",null,othShow(5)],
     ["oth5Age","手術5：手術日齢(日)","n",null,othShow(5),{day:1}],
     ["oth5Ext","手術5：術後の抜管日齢(日)","n",null,othShow(5),{day:1,pair:"oth5Age",help:"継続中は空欄"}],
-    ["oth5Cx","手術5：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN,othShow(5)],
+    ["oth5Rei","手術5：術後に一度抜管された後の再挿管の有無","s",AN3,othShow(5)],
+    ["oth5ReiAge","手術5：再挿管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(5),{day:1}],
+    ["oth5ReiExt","手術5：再挿管後の抜管 日齢(日)","n",null,(n=>r=>othShow(n)(r)&&r["oth"+n+"Rei"]==="あり")(5),{day:1,pair:"oth5ReiAge",help:"継続中は空欄"}],
+    ["oth5Cx","手術5：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN3,othShow(5)],
     ["oth5CxD","手術5：術後合併症　詳細（自由記載）","t",null,othCxShow(5)]
   ]},
-  { id:"cause", name:"呼吸補助を要した理由", note:"最も重症であったイベントについて、主因を1つ選択してください。最終的なカテゴリ判定は研究代表施設が一括して行います。", fields:[
-    ["cause","呼吸補助を要した主因","s",["気道虚脱","上気道病変","肺実質病変・BPD","心疾患・心不全","呼吸器感染","中枢性・神経筋疾患","吻合部合併症","胃食道逆流・誤嚥","その他・不明"]],
-    ["cause2","呼吸補助を要した副因（複数可・自由記載）","t"],
-    ["basis","主因の判断根拠","s",["気管支鏡所見","dying spell等の臨床所見","画像所見","主治医記載のみ"]]
+  { id:"cause", name:"呼吸補助を要した理由（イベントごと）", note:"<b>発生した呼吸器イベントごとに</b>、呼吸補助を要した理由をご記入ください。「呼吸イベント」欄で「あり」とされたイベントの欄のみ表示されます。主因は1つ、副因は該当するものを複数お選びいただけます。最終的なカテゴリ判定は研究代表施設が一括して行います。", fields:[
+    ["causeImvMain","侵襲的人工呼吸管理：主因","s",CAUSES,ifEvent("imv")],
+    ["causeImvSub","侵襲的人工呼吸管理：副因（複数選択可）","m",CAUSES,ifEvent("imv")],
+    ["causeImvBasis","侵襲的人工呼吸管理：主因の判断根拠","s",BASES,ifEvent("imv")],
+    ["causeReiMain","初回抜管後の再挿管：主因","s",CAUSES,ifEvent("rei")],
+    ["causeReiSub","初回抜管後の再挿管：副因（複数選択可）","m",CAUSES,ifEvent("rei")],
+    ["causeReiBasis","初回抜管後の再挿管：主因の判断根拠","s",BASES,ifEvent("rei")],
+    ["causeNivMain","CPAP/NPPV/HFNC：主因","s",CAUSES,ifEvent("niv")],
+    ["causeNivSub","CPAP/NPPV/HFNC：副因（複数選択可）","m",CAUSES,ifEvent("niv")],
+    ["causeNivBasis","CPAP/NPPV/HFNC：主因の判断根拠","s",BASES,ifEvent("niv")],
+    ["causeSurgMain","気道安定化手術（気管切開・後方気管固定術・大動脈前方つり上げ術）：主因","s",CAUSES,ifAirwaySurg],
+    ["causeSurgSub","気道安定化手術：副因（複数選択可）","m",CAUSES,ifAirwaySurg],
+    ["causeSurgBasis","気道安定化手術：主因の判断根拠","s",BASES,ifAirwaySurg],
+    ["causeDeathMain","重症呼吸不全に関連した死亡：主因","s",CAUSES,ifEvent("death")],
+    ["causeDeathSub","重症呼吸不全に関連した死亡：副因（複数選択可）","m",CAUSES,ifEvent("death")],
+    ["causeDeathBasis","重症呼吸不全に関連した死亡：主因の判断根拠","s",BASES,ifEvent("death")]
   ]},
   { id:"sec2", name:"副次項目（感染入院・BF・CT）", note:"BF・CTは<b>施行例のみ</b>ご記入ください。未施行例は空欄で構いません。", fields:[
     ["adm","月齢6までの呼吸器感染入院回数","n"],
@@ -422,7 +467,8 @@ const SECTIONS = [
     ["ct","CT撮像の有無","s",AN],
     ["ctA","CT撮像日齢(日)","n",null,["ct","あり"],{day:1}],
     ["ctP","CT撮像時の呼吸相","s",["吸気相","呼気相","不明"],["ct","あり"]],
-    ["ctV","CT撮像時の気管挿管・陽圧換気の有無","s",["あり","なし","不明"],["ct","あり"]],
+    ["ctIntub","CT撮像時の気管挿管の有無","s",AN3,["ct","あり"]],
+    ["ctPPV","CT撮像時の陽圧換気の有無","s",AN3,["ct","あり"],{help:"人工呼吸器・CPAP/NPPV等による陽圧がかかっていたか。LARは陽圧の影響を受けるため、挿管の有無とは別にご記入ください"}],
     ["ctLat","気管横径(mm)","n",null,["ct","あり"],{flag:1,help:"腕頭動脈が気管と交差するレベルのスライスで計測。単純CT・造影CTのいずれでも構いません"}],
     ["ctAP","気管前後径(mm)","n",null,["ct","あり"],{flag:1,help:"同一スライスでの前後径（縦径）"}],
     ["lar","LAR（自動計算：横径／前後径）","c",null,["ct","あり"],{flag:1,num:"ctLat",den:"ctAP",dp:3}]
@@ -795,6 +841,18 @@ function fieldRow(f, r, issue){
       r[f.key] = (r[f.key] === o ? "" : o); save(); render();
     }}, o)));
     ctl.append(seg);
+  }
+  else if(f.type === "m"){
+    /* 複数選択。値は「／」区切りの1項目として保存する */
+    const cur = String(r[f.key] || "").split("／").filter(Boolean);
+    const seg = el("div",{class:"seg multi"});
+    f.opts.forEach(o => seg.append(el("button",{type:"button", "aria-pressed":String(cur.indexOf(o) >= 0), onclick:()=>{
+      const next = cur.indexOf(o) >= 0 ? cur.filter(x => x !== o) : cur.concat([o]);
+      r[f.key] = f.opts.filter(x => next.indexOf(x) >= 0).join("／");
+      save(); render();
+    }}, o)));
+    ctl.append(seg);
+    ctl.append(el("div",{class:"hint"}, cur.length ? "選択中: " + cur.length + " 件" : "該当する副因があればお選びください（任意）"));
   }
   else if(f.type === "s"){
     const sel = el("select",{id, onchange:e => { r[f.key] = e.target.value; save(); render(); }});

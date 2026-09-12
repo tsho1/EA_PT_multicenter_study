@@ -194,6 +194,7 @@ input.bad,select.bad{border-color:var(--crit)}
 .chip.warn{color:var(--warn); border-color:var(--warn-line); background:var(--warn-soft)}
 .chip.ok{color:var(--ok); border-color:transparent; background:transparent}
 .chip.sample{color:var(--warn); border-color:var(--warn-line); background:var(--warn-soft)}
+.chip.muted{color:var(--faint); border-color:var(--line); background:var(--surface-2)}
 
 .empty-state{padding:34px 16px; text-align:center; color:var(--faint); font-size:13.5px}
 
@@ -275,8 +276,13 @@ const AN = ["あり","なし"];
 /* 参加10施設（あいうえお順。清音→濁音の順で並べている） */
 const SITES = ["旭川医科大学","群馬小児","埼玉小児","順天堂大学","成育","天使","東京大学","道立子ども","名古屋大学","北海道大学"];
 
+/* 根治術以外の手術は最大5件。前の手術が埋まったら次の欄を出す */
+const hasAny = (r, keys) => keys.some(k => r[k] !== "" && r[k] !== null && r[k] !== undefined);
+const othShow = n => r => r.oth === "あり" && (n === 1 || hasAny(r, ["oth" + (n-1) + "Name", "oth" + (n-1) + "Age"]));
+const othCxShow = n => r => r.oth === "あり" && r["oth" + n + "Cx"] === "あり";
+
 const SECTIONS = [
-  { id:"base", name:"基本情報・適格性", note:"患者氏名・カルテ番号・生年月日は入力しないでください。日付はすべて<b>日齢</b>（出生日＝0日目）でご記入ください。", fields:[
+  { id:"base", name:"基本情報・適格性", note:"患者氏名・カルテ番号・生年月日は入力しないでください。日付はすべて<b>日齢</b>（出生日＝0日目）でご記入ください。<br>まずこの欄の適格性をご判定ください。<b>対象外と判定された場合は、以降の項目は表示されず入力不要になります。</b>", fields:[
     ["caseId","症例番号（施設内の通し番号）","t",null,null,{req:1,help:"1, 2, 3… の通し番号です。症例を追加すると自動で入ります。カルテ番号・氏名は入力しないでください。"}],
     ["site","施設名","s",SITES,null,{req:1}],
     ["inc1","選択基準① Gross分類C型・一期的根治術を対象期間内（2014/1/1–2025/12/31）に施行","s",YN],
@@ -301,7 +307,7 @@ const SECTIONS = [
   { id:"uedr", name:"UEDR（上部食道拡張度）", note:"根治術<b>前</b>レントゲンで計測。実測値2つを入力すると比が自動計算されます（Tröbs et al. Acta Paediatr 2018 に準拠）。", fields:[
     ["ue","上部食道盲端最大横径(mm)","n",null,null,{flag:1}],
     ["tv","第一胸椎横径(mm)","n",null,null,{flag:1}],
-    ["uedr","UEDR（自動計算）","c",null,null,{flag:1}]
+    ["uedr","UEDR（自動計算）","c",null,null,{flag:1,num:"ue",den:"tv",dp:3}]
   ]},
   { id:"op", name:"根治術", fields:[
     ["opAge","根治術日齢(日)","n",null,null,{req:1,help:"遷延性呼吸補助の起算点および術後人工呼吸管理期間の算出に使う必須項目です"}],
@@ -316,30 +322,50 @@ const SECTIONS = [
     ["airw","気管軟化症以外の先天性気道異常・先天性肺／胸郭疾患の有無","s",AN,null,{help:"喉頭軟化症・気管狭窄・肺低形成・胸郭変形など"}],
     ["airwName","上記の病名（自由記載）","t",null,["airw","あり"]],
     ["cx","根治術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN],
-    ["cxD","根治術後合併症　詳細（自由記載）","t",null,["cx","あり"]],
+    ["cxD","根治術後合併症　詳細（自由記載）","t",null,["cx","あり"]]
+  ]},
+  { id:"othsurg", name:"根治術以外の手術（月齢6まで）", note:"心疾患手術など、食道閉鎖根治術以外に全身麻酔を要した手術を<b>最大5件</b>ご記入ください。これらの手術後の人工呼吸管理も、根治術後と同じ基準（術後14日以内の抜管など）で評価します。<b>術後の抜管日齢</b>を必ずご記入ください。", fields:[
     ["oth","月齢6までに施行した根治術以外の手術の有無","s",AN],
-    ["othName","その手術の術式（自由記載）","t",null,["oth","あり"]],
-    ["othAge","その手術の日齢(日)","n",null,["oth","あり"],{day:1}],
-    ["othCx","その手術の術後合併症（CD IIIa以上・30日以内）の有無","s",AN,["oth","あり"]],
-    ["othCxD","その術後合併症　詳細（自由記載）","t",null,["othCx","あり"]]
+    ["oth1Name","手術1：術式（自由記載）","t",null,othShow(1)],
+    ["oth1Age","手術1：手術日齢(日)","n",null,othShow(1),{day:1}],
+    ["oth1Ext","手術1：術後の抜管日齢(日)","n",null,othShow(1),{day:1,pair:"oth1Age",help:"術後に人工呼吸管理を要した場合にご記入ください。手術室で抜管した場合は手術日齢と同じ値で構いません。抜管に至らず継続中は空欄"}],
+    ["oth1Cx","手術1：術後合併症（CD IIIa以上・30日以内）の有無","s",AN,othShow(1)],
+    ["oth1CxD","手術1：術後合併症　詳細（自由記載）","t",null,othCxShow(1)],
+    ["oth2Name","手術2：術式（自由記載）","t",null,othShow(2)],
+    ["oth2Age","手術2：手術日齢(日)","n",null,othShow(2),{day:1}],
+    ["oth2Ext","手術2：術後の抜管日齢(日)","n",null,othShow(2),{day:1,pair:"oth2Age",help:"継続中は空欄"}],
+    ["oth2Cx","手術2：術後合併症（CD IIIa以上・30日以内）の有無","s",AN,othShow(2)],
+    ["oth2CxD","手術2：術後合併症　詳細（自由記載）","t",null,othCxShow(2)],
+    ["oth3Name","手術3：術式（自由記載）","t",null,othShow(3)],
+    ["oth3Age","手術3：手術日齢(日)","n",null,othShow(3),{day:1}],
+    ["oth3Ext","手術3：術後の抜管日齢(日)","n",null,othShow(3),{day:1,pair:"oth3Age",help:"継続中は空欄"}],
+    ["oth3Cx","手術3：術後合併症（CD IIIa以上・30日以内）の有無","s",AN,othShow(3)],
+    ["oth3CxD","手術3：術後合併症　詳細（自由記載）","t",null,othCxShow(3)],
+    ["oth4Name","手術4：術式（自由記載）","t",null,othShow(4)],
+    ["oth4Age","手術4：手術日齢(日)","n",null,othShow(4),{day:1}],
+    ["oth4Ext","手術4：術後の抜管日齢(日)","n",null,othShow(4),{day:1,pair:"oth4Age",help:"継続中は空欄"}],
+    ["oth4Cx","手術4：術後合併症（CD IIIa以上・30日以内）の有無","s",AN,othShow(4)],
+    ["oth4CxD","手術4：術後合併症　詳細（自由記載）","t",null,othCxShow(4)],
+    ["oth5Name","手術5：術式（自由記載）","t",null,othShow(5)],
+    ["oth5Age","手術5：手術日齢(日)","n",null,othShow(5),{day:1}],
+    ["oth5Ext","手術5：術後の抜管日齢(日)","n",null,othShow(5),{day:1,pair:"oth5Age",help:"継続中は空欄"}],
+    ["oth5Cx","手術5：術後合併症（CD IIIa以上・30日以内）の有無","s",AN,othShow(5)],
+    ["oth5CxD","手術5：術後合併症　詳細（自由記載）","t",null,othCxShow(5)]
   ]},
   { id:"resp", name:"呼吸イベント", note:"<b>Grade判定は行いません。</b>各項目の「有無」と「日齢」のみご記入ください。Grade分類は研究代表施設（埼玉県立小児医療センター）が一括して行います。同一項目に複数エピソードがある場合は初回の日齢を入力し、備考に追加分をご記入ください。", fields:[
-    ["hot","在宅酸素療法の有無","s",AN],
-    ["hotS","在宅酸素療法 開始日齢(日)","n",null,["hot","あり"],{day:1}],
-    ["hotE","在宅酸素療法 終了日齢(日)","n",null,["hot","あり"],{day:1,pair:"hotS",help:"継続中は空欄"}],
-    ["dcO2","退院時（または月齢6時点）の酸素投与継続の有無","s",AN],
-    ["hf","HFNCによる呼吸補助の有無","s",AN],
-    ["hfS","HFNC 開始日齢(日)","n",null,["hf","あり"],{day:1}],
-    ["hfE","HFNC 終了日齢(日)","n",null,["hf","あり"],{day:1,pair:"hfS",help:"継続中は空欄"}],
-    ["niv","CPAPまたはNPPVによる非侵襲的陽圧換気の有無","s",AN],
-    ["nivS","CPAP/NPPV 開始日齢(日)","n",null,["niv","あり"],{day:1}],
-    ["nivE","CPAP/NPPV 終了日齢(日)","n",null,["niv","あり"],{day:1,pair:"nivS",help:"継続中は空欄"}],
     ["imv","予定外の気管内挿管・侵襲的人工呼吸管理の有無","s",AN],
     ["imvS","侵襲的人工呼吸管理 開始日齢(日)","n",null,["imv","あり"],{day:1}],
     ["imvE","侵襲的人工呼吸管理 終了日齢(日：抜管日)","n",null,["imv","あり"],{day:1,pair:"imvS",help:"継続中は空欄"}],
     ["rei","初回抜管後の再挿管の有無","s",AN],
     ["reiS","再挿管 日齢(日)","n",null,["rei","あり"],{day:1}],
     ["reiE","再挿管後の抜管 日齢(日)","n",null,["rei","あり"],{day:1,pair:"reiS",help:"継続中は空欄"}],
+    ["niv","CPAP/NPPV/HFNCによる呼吸補助の有無","s",AN,null,{help:"CPAP・NPPV・HFNCはいずれもGrade 3に相当するため、デバイスを区別せずまとめてご記入ください"}],
+    ["nivS","CPAP/NPPV/HFNC 開始日齢(日)","n",null,["niv","あり"],{day:1,help:"最初に開始した日齢"}],
+    ["nivE","CPAP/NPPV/HFNC 終了日齢(日)","n",null,["niv","あり"],{day:1,pair:"nivS",help:"最後に終了した日齢。離脱過程で48時間未満の中断をはさんで別のデバイスへ移行した場合も、同一エピソードとして通算してください。継続中は空欄"}],
+    ["dcO2","退院時（または月齢6時点）の酸素投与継続の有無","s",AN],
+    ["hot","在宅酸素療法の有無","s",AN],
+    ["hotS","在宅酸素療法 開始日齢(日)","n",null,["hot","あり"],{day:1}],
+    ["hotE","在宅酸素療法 終了日齢(日)","n",null,["hot","あり"],{day:1,pair:"hotS",help:"継続中は空欄"}],
     ["trach","気管切開の有無","s",AN],
     ["trachA","気管切開 実施日齢(日)","n",null,["trach","あり"],{day:1}],
     ["pt","後方気管固定術の有無","s",AN],
@@ -363,11 +389,11 @@ const SECTIONS = [
     ["bfF","BF所見（気道虚脱重症度）","t",null,["bf","あり"],{help:"例）呼気時の気管内腔虚脱率 80%"}],
     ["ct","CT撮像の有無","s",AN],
     ["ctA","CT撮像日齢(日)","n",null,["ct","あり"],{day:1}],
-    ["ctC","CT造影の有無","s",["造影あり","単純"],["ct","あり"]],
     ["ctP","CT撮像時の呼吸相","s",["吸気相","呼気相","不明"],["ct","あり"]],
     ["ctV","CT撮像時の気管挿管・陽圧換気の有無","s",["あり","なし","不明"],["ct","あり"]],
-    ["ctT","CTスライス厚(mm)","n",null,["ct","あり"]],
-    ["lar","LAR（気管横径／前後径比）","n",null,["ct","あり"],{help:"腕頭動脈が気管と交差するレベルのスライスで計測"}]
+    ["ctLat","気管横径(mm)","n",null,["ct","あり"],{flag:1,help:"腕頭動脈が気管と交差するレベルのスライスで計測。単純CT・造影CTのいずれでも構いません"}],
+    ["ctAP","気管前後径(mm)","n",null,["ct","あり"],{flag:1,help:"同一スライスでの前後径（縦径）"}],
+    ["lar","LAR（自動計算：横径／前後径）","c",null,["ct","あり"],{flag:1,num:"ctLat",den:"ctAP",dp:3}]
   ]},
   { id:"misc", name:"その他", fields:[
     ["endR","追跡終了理由","t"],
@@ -387,7 +413,6 @@ const SITE_FIELDS = [
   ["policy","吻合部保護等を目的とした待機的挿管の方針","a"],
   ["extTiming","標準的な抜管時期（術後日数の目安）","t"],
   ["ctPolicy","術後CT撮像の適応方針","a"],
-  ["larOk","LAR計測の可否","s",["可","否","条件付きで可"]],
   ["memo","備考","a"]
 ].map((f,i) => ({key:f[0], label:f[1], type:f[2], opts:f[3]||null, col:colLetter(i)}));
 
@@ -398,12 +423,12 @@ const EXCL_FIELDS = [
   ["ga","在胎週数(週)","n"],
   ["ue","上部食道盲端最大横径(mm)","n"],
   ["tv","第一胸椎横径(mm)","n"],
-  ["uedr","UEDR（自動計算）","c"],
+  ["uedr","UEDR（自動計算）","c",null,{num:"ue",den:"tv",dp:3}],
   ["surg","併施した気道安定化手術","t"],
   ["reason","当該手術の適応理由（自由記載）","a"],
   ["basis","適応判断に用いた所見","s",["術前画像所見","術中気管支鏡所見","上部食道拡張度","その他"]],
   ["memo","備考","a"]
-].map((f,i) => ({key:f[0], label:f[1], type:f[2], opts:f[3]||null, col:colLetter(i)}));
+].map((f,i) => ({key:f[0], label:f[1], type:f[2], opts:f[3]||null, ...(f[4]||{}), col:colLetter(i)}));
 
 function colLetter(i){ let s="", n=i+1; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26);} return s; }
 
@@ -430,17 +455,44 @@ function save(){
 function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(save, 350); }
 
 /* ════════ 3. 計算・検証 ════════ */
-function uedrOf(r){
-  const a = num(r.ue), b = num(r.tv);
+/* 自動計算欄（UEDR・LAR）は「分子キー／分母キー」を項目定義から受け取って計算する */
+function ratioOf(f, r){
+  const a = num(r[f.num]), b = num(r[f.den]);
   return (a !== null && b !== null && b !== 0) ? a/b : null;
 }
+function uedrOf(r){ return ratioOf({num:"ue", den:"tv"}, r); }
 function num(v){
   if(v === "" || v === null || v === undefined) return null;
   const n = Number(v); return isFinite(n) ? n : null;
 }
-function visible(f, r){ return !f.cond || r[f.cond[0]] === f.cond[1]; }
+/* 適格性の判定。
+   選択基準①②を満たさない、または除外基準①②③⑤に該当する症例は、
+   主解析・副次評価・感度解析のいずれにも用いないため、以降の項目は入力不要とする。
+   除外基準④該当例は主解析からは除外するが選択バイアス評価の感度解析に用いるため、
+   「除外例④」タブへの記入に誘導する。 */
+const EXC_LABELS = [
+  ["exc1","①Gross分類C型以外"],
+  ["exc2","②多段階手術（一期的根治せず）"],
+  ["exc3","③二次性気管軟化（血管輪等）"],
+  ["exc5","⑤気管軟化と無関係の死亡・追跡不能"]
+];
+function outOfScope(r){
+  if(r.inc1 === "いいえ") return {kind:"out", why:"選択基準①を満たしません"};
+  if(r.inc2 === "いいえ") return {kind:"out", why:"選択基準②を満たしません"};
+  for(const [k, t] of EXC_LABELS){
+    if(r[k] === "はい") return {kind:"out", why:"除外基準" + t + "に該当します"};
+  }
+  if(r.exc4 === "はい") return {kind:"excl4", why:"除外基準④に該当します"};
+  return null;
+}
+function visible(f, r){
+  if(f.sec && f.sec !== "base" && outOfScope(r)) return false;
+  if(!f.cond) return true;
+  if(typeof f.cond === "function") return !!f.cond(r);
+  return r[f.cond[0]] === f.cond[1];
+}
 function filled(f, r){
-  if(f.type === "c") return uedrOf(r) !== null;
+  if(f.type === "c") return ratioOf(f, r) !== null;
   const v = r[f.key]; return v !== "" && v !== null && v !== undefined;
 }
 function progress(r){
@@ -455,18 +507,16 @@ function validate(r){
 
   FIELDS.forEach(f => { if(f.req && visible(f,r) && !filled(f,r)) add("crit", f.key, "必須項目です"); });
 
-  if(v("inc1") === "いいえ") add("crit","inc1","選択基準①を満たさないため対象外です");
-  if(v("inc2") === "いいえ") add("crit","inc2","選択基準②を満たさないため対象外です");
-  [["exc1","①Gross分類C型以外"],["exc2","②多段階手術"],["exc3","③二次性気管軟化"],["exc5","⑤無関係の死亡・追跡不能"]]
-    .forEach(([k,t]) => { if(v(k) === "はい") add("crit", k, "除外基準"+t+"に該当するため、この症例は対象外です"); });
-  if(v("exc4") === "はい") add("crit","exc4","除外基準④に該当します。主解析からは除外されますが、「除外例④」タブへのご記入をお願いします");
+  /* 対象外・除外例④は「誤り」ではなくスクリーニング結果なので、注意喚起（warn）として表示する */
+  if(v("inc1") === "いいえ") add("warn","inc1","選択基準①を満たさないため対象外です");
+  if(v("inc2") === "いいえ") add("warn","inc2","選択基準②を満たさないため対象外です");
+  EXC_LABELS.forEach(([k,t]) => { if(v(k) === "はい") add("warn", k, "除外基準"+t+"に該当するため対象外です"); });
+  if(v("exc4") === "はい") add("warn","exc4","「除外例④」タブへのご記入をお願いします");
 
   const rng = (k,lo,hi,unit) => { const x = n(k); if(x !== null && (x < lo || x > hi)) add("warn", k, "通常は "+lo+"–"+hi+unit+" の範囲です。お確かめください"); };
   rng("bw",300,6000,"g"); rng("ga",20,42,"週"); rng("gad",0,6,"日");
-  rng("ue",1,60,"mm"); rng("tv",1,40,"mm"); rng("adm",0,20,"回");
-
-  const u = uedrOf(r);
-  if(u !== null && (u < 0.3 || u > 6)) add("warn","uedr","UEDRが通常の範囲外です。横径・胸椎径の入力をお確かめください");
+  rng("adm",0,20,"回");
+  /* UEDR関連（上部食道盲端最大横径・第一胸椎横径・UEDR）は計測値の幅が広いため範囲チェックを行わない */
 
   const op = n("opAge");
   FIELDS.forEach(f => {
@@ -474,7 +524,7 @@ function validate(r){
     const x = n(f.key); if(x === null) return;
     if(x < 0) add("crit", f.key, "日齢は0以上で入力してください");
     else if(x > DAY6M) add("warn", f.key, "月齢6（"+DAY6M+"日）を超えています");
-    if(op !== null && x < op && f.key !== "othAge") add("warn", f.key, "根治術日齢（"+op+"日）より前になっています");
+    if(op !== null && x < op && !f.key.startsWith("oth")) add("warn", f.key, "根治術日齢（"+op+"日）より前になっています");
     if(f.pair){ const s = n(f.pair); if(s !== null && x < s) add("crit", f.key, "開始日齢（"+s+"日）より前になっています"); }
   });
   if(op !== null && (op < 0 || op > DAY6M)) add("warn","opAge","根治術日齢が0–"+DAY6M+"日の範囲外です");
@@ -490,10 +540,8 @@ function validate(r){
   return out;
 }
 function grade(r){
-  if(r.exc4 === "はい" || ["exc1","exc2","exc3","exc5"].some(k => r[k] === "はい")) return null;
-  const c = validate(r).filter(x => x.level === "crit").length;
-  const w = validate(r).filter(x => x.level === "warn").length;
-  return {c, w};
+  const is = validate(r);
+  return { c: is.filter(x => x.level === "crit").length, w: is.filter(x => x.level === "warn").length };
 }
 
 /* ════════ 4. 描画 ════════ */
@@ -517,7 +565,7 @@ function el(tag, attrs, ...kids){
 function render(){
   main.replaceChildren();
   barIn.replaceChildren();
-  simpleObjs = [];
+  simpleObjs = []; simpleCalcFields = [];
   document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.view === view && editing === null)));
   document.getElementById("n-cases").textContent = store.cases.length;
   document.getElementById("n-excl").textContent = store.excl.length;
@@ -552,11 +600,13 @@ function renderCases(){
       const p = progress(c), g = grade(c);
       const pct = p.total ? Math.round(p.done/p.total*100) : 0;
       const u = uedrOf(c);
+      const oos = outOfScope(c);
       const right = el("div",{class:"cright"});
       if(c._sample) right.append(el("span",{class:"chip sample"},"サンプル"));
+      else if(oos && oos.kind === "excl4") right.append(el("span",{class:"chip warn"},"除外例④"));
+      else if(oos) right.append(el("span",{class:"chip muted"},"対象外"));
       else if(g && g.c) right.append(el("span",{class:"chip crit"},"要確認 "+g.c));
       else if(g && g.w) right.append(el("span",{class:"chip warn"},"確認 "+g.w));
-      else if(!g) right.append(el("span",{class:"chip crit"},"対象外"));
       else if(pct === 100) right.append(el("span",{class:"chip ok"},"完了"));
       right.append(el("div",{class:"bar"}, el("i",{style:"width:"+pct+"%"})));
       ul.append(el("li",{}, el("button",{class:"caserow", onclick:()=>{ editing = i; openSec = {base:1}; render(); window.scrollTo(0,0); }},
@@ -605,10 +655,12 @@ function renderForm(){
   issues.forEach(i => { if(!byKey[i.key] || i.level === "crit") byKey[i.key] = i; });
   const p = progress(r);
 
-  const allOpen = SECTIONS.every(s => openSec[s.id]);
+  const oos = outOfScope(r);
+  const secs = oos ? SECTIONS.filter(s => s.id === "base") : SECTIONS;
+  const allOpen = secs.every(s => openSec[s.id]);
   main.append(el("div",{class:"jump"},
-    el("button",{onclick:()=>{ SECTIONS.forEach(s => openSec[s.id] = !allOpen); render(); }}, allOpen ? "すべて閉じる" : "すべて開く"),
-    SECTIONS.map(s => {
+    oos ? null : el("button",{onclick:()=>{ secs.forEach(s => openSec[s.id] = !allOpen); render(); }}, allOpen ? "すべて閉じる" : "すべて開く"),
+    secs.map(s => {
       const vis = s.fields.map(f => BYKEY[f[0]]).filter(f => visible(f,r) && f.type !== "c");
       const d = vis.filter(f => filled(f,r)).length;
       return el("button",{class: vis.length && d === vis.length ? "done" : "", onclick:()=>{
@@ -616,6 +668,24 @@ function renderForm(){
         requestAnimationFrame(()=>{ const t = document.getElementById("sec-"+s.id); if(t) t.scrollIntoView({block:"start", behavior:"smooth"}); });
       }}, s.name + " " + d + "/" + vis.length);
     })));
+
+  if(oos && oos.kind === "out"){
+    main.append(el("div",{class:"banner warn"},
+      el("div",{html:"<b>この症例は対象外です（" + oos.why + "）。</b>主解析・副次評価・感度解析のいずれにも用いないため、<b>以降の項目の入力は不要です。</b>このまま保存して次の症例へお進みください。"})));
+  } else if(oos && oos.kind === "excl4"){
+    main.append(el("div",{class:"banner info"},
+      el("div",{html:"<b>除外基準④に該当します。</b>主解析からは除外しますが、<b>選択バイアスを評価する感度解析に用いるため</b>「除外例④」タブへのご記入をお願いします。この画面での以降の項目の入力は不要です。"}),
+      el("div",{class:"act"}, el("button",{class:"btn sm", onclick:()=>{
+        save(); editing = null; view = "excl";
+        if(!store.excl.some(x => x.caseId === r.caseId && x.site === r.site)){
+          const n = {}; EXCL_FIELDS.forEach(f => n[f.key] = "");
+          n.site = r.site || ""; n.caseId = r.caseId || "";
+          n.bw = r.bw || ""; n.ga = r.ga || ""; n.ue = r.ue || ""; n.tv = r.tv || "";
+          store.excl.push(n); save();
+        }
+        render(); window.scrollTo(0,0);
+      }},"「除外例④」タブへ移動して登録する"))));
+  }
 
   const crit = issues.filter(i => i.level === "crit");
   if(crit.length){
@@ -625,7 +695,7 @@ function renderForm(){
     ));
   }
 
-  SECTIONS.forEach(s => {
+  secs.forEach(s => {
     const open = !!openSec[s.id];
     const vis = s.fields.map(f => BYKEY[f[0]]).filter(f => visible(f,r) && f.type !== "c");
     const done = vis.filter(f => filled(f,r)).length;
@@ -671,7 +741,7 @@ function fieldRow(f, r, issue){
   const set = v => { r[f.key] = v; saveSoon(); };
 
   if(f.type === "c"){
-    ctl.append(el("div",{class:"calc", id:"calc-" + f.key, html:calcHtml(r)}));
+    ctl.append(el("div",{class:"calc", id:"calc-" + f.key, html:calcHtml(f, r)}));
   }
   else if(f.type === "s" && f.opts.length <= 3){
     const seg = el("div",{class:"seg"});
@@ -710,10 +780,10 @@ function fieldRow(f, r, issue){
 }
 
 /* 入力中はDOMを作り直さず、派生表示（UEDR・日齢の目安・注意書き）だけを更新する */
-function calcHtml(r){
-  const u = uedrOf(r);
-  if(u === null) return '<span class="empty">横径と胸椎径を入力すると表示されます</span>';
-  return u.toFixed(3) + '<span class="expr">' + xesc(r.ue) + " ÷ " + xesc(r.tv) + " mm</span>";
+function calcHtml(f, r){
+  const u = ratioOf(f, r);
+  if(u === null) return '<span class="empty">上の2つを入力すると自動で計算されます</span>';
+  return u.toFixed(f.dp || 3) + '<span class="expr">' + xesc(r[f.num]) + " ÷ " + xesc(r[f.den]) + " mm</span>";
 }
 function dayHint(f, r){
   const x = num(r[f.key]), op = num(r.opAge);
@@ -726,8 +796,10 @@ function dayHint(f, r){
 function refreshDerived(){
   const r = store.cases[editing];
   if(!r) return;
-  const c = document.getElementById("calc-uedr");
-  if(c) c.innerHTML = calcHtml(r);
+  FIELDS.filter(f => f.type === "c").forEach(f => {
+    const c = document.getElementById("calc-" + f.key);
+    if(c) c.innerHTML = calcHtml(f, r);
+  });
   const byKey = {};
   validate(r).forEach(i => { if(!byKey[i.key] || i.level === "crit") byKey[i.key] = i; });
   FIELDS.forEach(f => {
@@ -773,11 +845,11 @@ function renderExcl(){
   }},"＋ 除外例を追加"), el("span",{class:"savestate", id:"savestate"}, saveMark));
 }
 
-let simpleObjs = [];
+let simpleObjs = [], simpleCalcFields = [];
 function refreshSimpleCalcs(){
   document.querySelectorAll("[data-oi]").forEach(elm => {
-    const o = simpleObjs[+elm.dataset.oi];
-    if(o) elm.innerHTML = calcHtml(o);
+    const o = simpleObjs[+elm.dataset.oi], f = simpleCalcFields[+elm.dataset.oi];
+    if(o && f) elm.innerHTML = calcHtml(f, o);
   });
 }
 function simpleRow(f, obj){
@@ -789,7 +861,8 @@ function simpleRow(f, obj){
   const ctl = el("div",{class:"ctl"});
   const set = v => { obj[f.key] = v; saveSoon(); };
   if(f.type === "c"){
-    ctl.append(el("div",{class:"calc", "data-oi":String(oi), html:calcHtml(obj)}));
+    simpleCalcFields[oi] = f;
+    ctl.append(el("div",{class:"calc", "data-oi":String(oi), html:calcHtml(f, obj)}));
   } else if(f.type === "s"){
     const sel = el("select",{onchange:e => { obj[f.key] = e.target.value; save(); }});
     sel.append(el("option",{value:""},"— 未選択 —"));
@@ -825,6 +898,10 @@ function renderExport(){
     tbl.append(el("tr",{}, el("td",{}, row[0]), el("td",{class:"num"}, row[1] + " 列（A–" + colLetter(row[1]-1) + "）"), el("td",{class:"num"}, row[2] + " 行")));
   });
   body.append(el("div",{class:"scroller"}, tbl));
+  const live = rows.filter(r => !outOfScope(r)).length;
+  const outN = rows.filter(r => { const o = outOfScope(r); return o && o.kind === "out"; }).length;
+  const e4 = rows.filter(r => { const o = outOfScope(r); return o && o.kind === "excl4"; }).length;
+  body.append(el("div",{class:"note", html:"内訳：<b>解析対象 " + live + " 件</b> ／ 対象外 " + outN + " 件 ／ 除外基準④ " + e4 + " 件。<b>対象外の症例も書き出しに含めます</b>（何例をスクリーニングし何例を除外したかの記録として必要なため）。"}));
   card.append(body);
   main.append(card);
 
@@ -855,7 +932,7 @@ async function doExport(kind, status){
     let blob, name;
     if(kind === "csv"){
       const head = FIELDS.map(f => f.label);
-      const lines = [head].concat(rows.map(r => FIELDS.map(f => f.type === "c" ? (uedrOf(r) ?? "") : (r[f.key] ?? ""))));
+      const lines = [head].concat(rows.map(r => FIELDS.map(f => f.type === "c" ? (ratioOf(f, r) ?? "") : (r[f.key] ?? ""))));
       const csv = "﻿" + lines.map(l => l.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(",")).join("\r\n");
       blob = new Blob([csv], {type:"text/csv"});
       name = "EA呼吸イベント_入力シート_" + site + "_" + stamp + ".csv";
@@ -938,7 +1015,7 @@ function buildXlsx(rows){
   return zipStore(files);
 }
 function cellOf(f, r){
-  if(f.type === "c"){ const u = uedrOf(r); return u === null ? "" : Math.round(u*1e6)/1e6; }
+  if(f.type === "c"){ const u = ratioOf(f, r); return u === null ? "" : Math.round(u*1e6)/1e6; }
   const v = r[f.key];
   if(v === "" || v === null || v === undefined) return "";
   if(f.type === "n"){ const n = Number(v); return isFinite(n) ? n : String(v); }

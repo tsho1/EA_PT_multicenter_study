@@ -1,4 +1,23 @@
-<title>EA呼吸イベント登録</title>
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EA呼吸イベント">
+<meta name="robots" content="noindex, nofollow">
+<style>
+:root{color-scheme:light dark}
+*{-webkit-tap-highlight-color:transparent}
+body{margin:0;font:14px system-ui,sans-serif;background:#F2F5F4}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+</head>
+<body><title>EA呼吸イベント登録</title>
 <!-- 外部への通信を一切行わないため、Webフォントは読み込まず端末内蔵のフォントのみを使う -->
 <style>
 :root{
@@ -257,7 +276,7 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:20px 0}
   <div class="top-in">
     <div class="brand">
       <h1>EA呼吸イベント登録</h1>
-      <span class="sub">SCMC / 多施設共同研究 v1.0</span>
+      <span class="sub">v2.7 · 2026-09-12 · SCMC</span>
     </div>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" id="tab-cases" aria-selected="true" data-view="cases">症例<span class="n" id="n-cases">0</span></button>
@@ -299,7 +318,7 @@ const SECTIONS = [
     ["exc1","除外基準① Gross分類C型以外に該当","s",YN],
     ["exc2","除外基準② 多段階手術を施行（一期的根治せず）","s",YN],
     ["exc3","除外基準③ 二次性気管軟化（血管輪等）に該当","s",YN],
-    ["exc4","除外基準④ 初回根治術と同時にPT等の気道安定化手術を併施","s",YN],
+    ["exc4","除外基準④ 初回根治術と同時に後方気管固定術等の気道安定化手術を併施","s",YN],
     ["exc5","除外基準⑤ 気管軟化と無関係の理由で月齢6未満に死亡／追跡不能","s",YN]
   ]},
   { id:"bg", name:"背景因子", fields:[
@@ -313,7 +332,7 @@ const SECTIONS = [
     ["gen","遺伝性疾患・染色体疾患の有無","s",AN],
     ["genD","遺伝性疾患・染色体疾患の詳細（任意）","t",null,["gen","あり"]]
   ]},
-  { id:"uedr", name:"UEDR（上部食道拡張度）", note:"根治術<b>前</b>レントゲンで計測。実測値2つを入力すると比が自動計算されます（Tröbs et al. Acta Paediatr 2018 に準拠）。", fields:[
+  { id:"uedr", name:"UEDR（上部食道拡張度）", note:"根治術<b>前</b>レントゲンで計測。実測値2つを入力すると比が自動計算されます（Tröbs et al. Acta Paediatr 2018 の手法を参考にしています）。", fields:[
     ["ue","上部食道盲端最大横径(mm)","n",null,null,{flag:1}],
     ["tv","第一胸椎横径(mm)","n",null,null,{flag:1}],
     ["uedr","UEDR（自動計算）","c",null,null,{flag:1,num:"ue",den:"tv",dp:3}]
@@ -329,7 +348,7 @@ const SECTIONS = [
     ["extAge","根治術後初回抜管日齢(日)","n",null,null,{day:1,help:"抜管に至らず継続管理中の場合は空欄"}],
     ["extType","根治術後初回抜管の別","s",["待機的","安定後速やかに","抜管困難","自己抜管","不明"],null,{help:"初回抜管が計画外の自己（事故）抜管であった場合は「自己抜管」を選択。待機的挿管の後にさらに抜管困難であった場合は「抜管困難」を選択"}],
     ["airw","気管軟化症以外の先天性気道異常・先天性肺／胸郭疾患の有無","s",AN,null,{help:"喉頭軟化症・気管狭窄・肺低形成・胸郭変形など"}],
-    ["airwName","上記の病名（自由記載）","t",null,["airw","あり"]],
+    ["airwName","気管軟化症以外の先天性気道異常・先天性肺／胸郭疾患の病名（自由記載）","t",null,["airw","あり"]],
     ["cx","根治術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN],
     ["cxD","根治術後合併症　詳細（自由記載）","t",null,["cx","あり"]]
   ]},
@@ -351,7 +370,7 @@ const SECTIONS = [
     ["trachA","気管切開 実施日齢(日)","n",null,["trach","あり"],{day:1}],
     ["pt","後方気管固定術の有無","s",AN],
     ["ptA","後方気管固定術 実施日齢(日)","n",null,["pt","あり"],{day:1}],
-    ["ao","大動脈前方固定術その他の気道安定化手術の有無","s",AN],
+    ["ao","大動脈前方つり上げ術その他の気道安定化手術の有無","s",AN],
     ["aoA","気道安定化手術 実施日齢(日)","n",null,["ao","あり"],{day:1}],
     ["aoN","気道安定化手術の術式名（自由記載）","t",null,["ao","あり"]],
     ["death","重症呼吸不全に関連した死亡の有無","s",AN],
@@ -363,31 +382,31 @@ const SECTIONS = [
     ["oth1Name","手術1：術式（自由記載）","t",null,othShow(1)],
     ["oth1Age","手術1：手術日齢(日)","n",null,othShow(1),{day:1}],
     ["oth1Ext","手術1：術後の抜管日齢(日)","n",null,othShow(1),{day:1,pair:"oth1Age",help:"術後に人工呼吸管理を要した場合にご記入ください。手術室で抜管した場合は手術日齢と同じ値で構いません。抜管に至らず継続中は空欄"}],
-    ["oth1Cx","手術1：術後合併症（CD IIIa以上・30日以内）の有無","s",AN,othShow(1)],
+    ["oth1Cx","手術1：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN,othShow(1)],
     ["oth1CxD","手術1：術後合併症　詳細（自由記載）","t",null,othCxShow(1)],
     ["othMore1","手術1のほかに、さらに根治術以外の手術があるか","s",AN,othShow(1),{help:"「なし」を選ぶと手術2以降の欄は不要になります"}],
     ["oth2Name","手術2：術式（自由記載）","t",null,othShow(2)],
     ["oth2Age","手術2：手術日齢(日)","n",null,othShow(2),{day:1}],
     ["oth2Ext","手術2：術後の抜管日齢(日)","n",null,othShow(2),{day:1,pair:"oth2Age",help:"継続中は空欄"}],
-    ["oth2Cx","手術2：術後合併症（CD IIIa以上・30日以内）の有無","s",AN,othShow(2)],
+    ["oth2Cx","手術2：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN,othShow(2)],
     ["oth2CxD","手術2：術後合併症　詳細（自由記載）","t",null,othCxShow(2)],
     ["othMore2","手術2のほかに、さらに根治術以外の手術があるか","s",AN,othShow(2),{help:"「なし」を選ぶと手術3以降の欄は不要になります"}],
     ["oth3Name","手術3：術式（自由記載）","t",null,othShow(3)],
     ["oth3Age","手術3：手術日齢(日)","n",null,othShow(3),{day:1}],
     ["oth3Ext","手術3：術後の抜管日齢(日)","n",null,othShow(3),{day:1,pair:"oth3Age",help:"継続中は空欄"}],
-    ["oth3Cx","手術3：術後合併症（CD IIIa以上・30日以内）の有無","s",AN,othShow(3)],
+    ["oth3Cx","手術3：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN,othShow(3)],
     ["oth3CxD","手術3：術後合併症　詳細（自由記載）","t",null,othCxShow(3)],
     ["othMore3","手術3のほかに、さらに根治術以外の手術があるか","s",AN,othShow(3),{help:"「なし」を選ぶと手術4以降の欄は不要になります"}],
     ["oth4Name","手術4：術式（自由記載）","t",null,othShow(4)],
     ["oth4Age","手術4：手術日齢(日)","n",null,othShow(4),{day:1}],
     ["oth4Ext","手術4：術後の抜管日齢(日)","n",null,othShow(4),{day:1,pair:"oth4Age",help:"継続中は空欄"}],
-    ["oth4Cx","手術4：術後合併症（CD IIIa以上・30日以内）の有無","s",AN,othShow(4)],
+    ["oth4Cx","手術4：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN,othShow(4)],
     ["oth4CxD","手術4：術後合併症　詳細（自由記載）","t",null,othCxShow(4)],
     ["othMore4","手術4のほかに、さらに根治術以外の手術があるか","s",AN,othShow(4),{help:"「なし」を選ぶと手術5の欄は不要になります"}],
     ["oth5Name","手術5：術式（自由記載）","t",null,othShow(5)],
     ["oth5Age","手術5：手術日齢(日)","n",null,othShow(5),{day:1}],
     ["oth5Ext","手術5：術後の抜管日齢(日)","n",null,othShow(5),{day:1,pair:"oth5Age",help:"継続中は空欄"}],
-    ["oth5Cx","手術5：術後合併症（CD IIIa以上・30日以内）の有無","s",AN,othShow(5)],
+    ["oth5Cx","手術5：術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN,othShow(5)],
     ["oth5CxD","手術5：術後合併症　詳細（自由記載）","t",null,othCxShow(5)]
   ]},
   { id:"cause", name:"呼吸補助を要した理由", note:"最も重症であったイベントについて、主因を1つ選択してください。最終的なカテゴリ判定は研究代表施設が一括して行います。", fields:[
@@ -1120,3 +1139,6 @@ if(window.claude && typeof window.claude.use === "function"){
 }
 render();
 </script>
+
+</body>
+</html>

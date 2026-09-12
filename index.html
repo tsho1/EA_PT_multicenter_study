@@ -799,7 +799,7 @@ function renderForm(){
     if(open){
       const body = el("div",{class:"body"});
       if(s.note) body.append(el("div",{class:"note", html:s.note}));
-      s.fields.forEach(fd => body.append(fieldRow(BYKEY[fd[0]], r, byKey[fd[0]])));
+      s.fields.forEach(fd => { const f = BYKEY[fd[0]]; if(visible(f, r)) body.append(fieldRow(f, r, byKey[fd[0]])); });
       card.append(body);
     }
     main.append(card);

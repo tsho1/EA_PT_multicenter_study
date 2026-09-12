@@ -1,0 +1,1014 @@
+<title>EA呼吸イベント登録</title>
+<!-- 外部への通信を一切行わないため、Webフォントは読み込まず端末内蔵のフォントのみを使う -->
+<style>
+:root{
+  --ground:#F2F5F4; --surface:#FFFFFF; --surface-2:#F8FAF9;
+  --ink:#14201D; --muted:#5D6E69; --faint:#8A9A95;
+  --line:#DAE2DF; --line-strong:#C3CFCB;
+  --accent:#0E6E63; --accent-ink:#0A544B; --accent-soft:#E0EFEC; --on-accent:#FFFFFF;
+  --warn:#8A5310; --warn-soft:#FAF0DE; --warn-line:#E8D2A8;
+  --crit:#95292A; --crit-soft:#FAE9E7; --crit-line:#EDC4BF;
+  --ok:#2A6842;
+  --radius:10px;
+  --shadow:0 1px 2px rgba(20,32,29,.06), 0 6px 16px -10px rgba(20,32,29,.18);
+  --jp:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Noto Sans JP",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,"SF Mono","SFMono-Regular","Cascadia Mono",Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1513; --surface:#17201E; --surface-2:#1C2624;
+    --ink:#E7EEEB; --muted:#9AAAA5; --faint:#75857F;
+    --line:#26332F; --line-strong:#35443F;
+    --accent:#5CC3B2; --accent-ink:#8FD9CC; --accent-soft:#12302B; --on-accent:#0E1513;
+    --warn:#DFAA5F; --warn-soft:#2C2415; --warn-line:#4A3C1F;
+    --crit:#E58B82; --crit-soft:#2F1A18; --crit-line:#4D2723;
+    --ok:#71C08D;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 16px -10px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1513; --surface:#17201E; --surface-2:#1C2624;
+  --ink:#E7EEEB; --muted:#9AAAA5; --faint:#75857F;
+  --line:#26332F; --line-strong:#35443F;
+  --accent:#5CC3B2; --accent-ink:#8FD9CC; --accent-soft:#12302B; --on-accent:#0E1513;
+  --warn:#DFAA5F; --warn-soft:#2C2415; --warn-line:#4A3C1F;
+  --crit:#E58B82; --crit-soft:#2F1A18; --crit-line:#4D2723;
+  --ok:#71C08D;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 16px -10px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--jp); font-size:15px; line-height:1.7;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:760px; margin:0 auto; padding-inline:18px; padding-block:0 120px}
+
+/* ---------- header ---------- */
+header.top{
+  position:sticky; top:0; z-index:40;
+  background:var(--ground);
+  border-bottom:1px solid var(--line);
+}
+@supports (backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){
+  header.top{
+    background:color-mix(in srgb, var(--ground) 88%, transparent);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+  }
+}
+.top-in{max-width:760px; margin:0 auto; padding:10px 18px 0}
+.brand{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+.brand h1{
+  font-size:16px; font-weight:700; margin:0; letter-spacing:.02em;
+}
+.brand .sub{font-size:11.5px; color:var(--faint); font-family:var(--mono); letter-spacing:.04em}
+.tabs{display:flex; gap:2px; margin-top:8px}
+.tab{
+  appearance:none; background:none; border:0; border-bottom:2px solid transparent;
+  color:var(--muted); font-family:inherit; font-size:13.5px; font-weight:500;
+  padding:7px 11px; cursor:pointer; white-space:nowrap;
+}
+.tab[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--accent)}
+.tab:focus-visible{outline:2px solid var(--accent); outline-offset:-2px; border-radius:4px 4px 0 0}
+.tab .n{font-family:var(--mono); font-size:11px; color:var(--faint); margin-left:5px}
+
+/* ---------- generic blocks ---------- */
+.card{
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--radius); margin-top:14px; overflow:hidden;
+}
+.card>h2{
+  margin:0; font-size:14px; font-weight:700; letter-spacing:.01em;
+  padding:13px 16px; display:flex; align-items:center; gap:10px;
+  border-bottom:1px solid var(--line); background:var(--surface-2);
+}
+.card>h2 .count{
+  margin-left:auto; font-family:var(--mono); font-size:11.5px;
+  color:var(--faint); font-weight:400; letter-spacing:.02em;
+}
+.card .body{padding:6px 16px 14px}
+
+.note{
+  font-size:12.5px; line-height:1.65; color:var(--muted);
+  border-left:2px solid var(--line-strong); padding:2px 0 2px 12px; margin:12px 0;
+}
+.note b{color:var(--ink); font-weight:500}
+
+.banner{
+  border-radius:var(--radius); padding:11px 14px; margin-top:14px;
+  font-size:13px; line-height:1.6; border:1px solid;
+}
+.banner.warn{background:var(--warn-soft); border-color:var(--warn-line); color:var(--warn)}
+.banner.crit{background:var(--crit-soft); border-color:var(--crit-line); color:var(--crit)}
+.banner.info{background:var(--accent-soft); border-color:transparent; color:var(--accent-ink)}
+.banner b{font-weight:700}
+.banner ul{margin:6px 0 0; padding-left:18px}
+.banner .act{margin-top:9px; display:flex; gap:8px; flex-wrap:wrap}
+
+/* ---------- fields ---------- */
+.field{
+  display:grid; grid-template-columns:34px 1fr; gap:0 10px;
+  padding:11px 0; border-bottom:1px solid var(--line);
+}
+.field:last-child{border-bottom:0}
+.field.hidden{display:none}
+.col{
+  font-family:var(--mono); font-size:10.5px; font-weight:600; letter-spacing:.03em;
+  color:var(--faint); background:var(--surface-2); border:1px solid var(--line);
+  border-radius:4px; text-align:center; height:19px; line-height:17px; margin-top:2px;
+}
+.field.flag .col{color:var(--accent); border-color:var(--accent); background:var(--accent-soft)}
+.lab{font-size:13px; font-weight:500; line-height:1.5; margin-bottom:6px}
+.lab .req{color:var(--crit); font-weight:700; margin-left:3px}
+.ctl{grid-column:2}
+.hint{font-size:11.5px; color:var(--faint); font-family:var(--mono); margin-top:5px; letter-spacing:.02em}
+.msg{font-size:11.5px; margin-top:5px; line-height:1.5}
+.msg.crit{color:var(--crit)} .msg.warn{color:var(--warn)}
+.msg:empty,.hint:empty{display:none}
+
+input[type=text],input[type=number],textarea,select{
+  /* iOSはフォントが16px未満だとフォーカス時に画面を拡大するため16pxを下限にする */
+  width:100%; font-family:inherit; font-size:16px; color:var(--ink);
+  background:var(--surface); border:1px solid var(--line-strong);
+  border-radius:8px; padding:9px 11px; line-height:1.5;
+}
+input[type=number]{font-family:var(--mono); font-variant-numeric:tabular-nums}
+textarea{min-height:76px; resize:vertical}
+select{appearance:none; background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%); background-position:calc(100% - 17px) 19px,calc(100% - 12px) 19px; background-size:5px 5px,5px 5px; background-repeat:no-repeat; padding-right:34px}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:var(--accent)}
+input.bad,select.bad{border-color:var(--crit)}
+.calc{
+  font-family:var(--mono); font-size:20px; font-weight:600; font-variant-numeric:tabular-nums;
+  color:var(--accent); padding:6px 0 2px; letter-spacing:.01em;
+}
+.calc .empty{color:var(--faint); font-size:14px; font-weight:400}
+.calc .expr{font-size:11px; color:var(--faint); font-weight:400; margin-left:8px; letter-spacing:.02em}
+
+/* segmented */
+.seg{display:flex; gap:6px; flex-wrap:wrap}
+.seg button{
+  appearance:none; font-family:inherit; font-size:14px; font-weight:500;
+  padding:8px 16px; min-height:40px; border-radius:8px; cursor:pointer;
+  background:var(--surface); border:1px solid var(--line-strong); color:var(--muted);
+}
+.seg button[aria-pressed="true"]{
+  background:var(--accent); border-color:var(--accent); color:var(--on-accent); font-weight:700;
+}
+.seg button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ---------- buttons ---------- */
+.btn{
+  appearance:none; font-family:inherit; font-size:14px; font-weight:600;
+  border-radius:8px; padding:10px 18px; min-height:42px; cursor:pointer;
+  border:1px solid var(--line-strong); background:var(--surface); color:var(--ink);
+}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
+.btn.ghost{border-color:transparent; background:transparent; color:var(--muted); font-weight:500}
+.btn.danger{color:var(--crit); border-color:var(--crit-line); background:transparent}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn[disabled]{opacity:.45; cursor:not-allowed}
+.btn.sm{font-size:12.5px; padding:6px 12px; min-height:32px}
+
+/* ---------- case list ---------- */
+.caselist{list-style:none; margin:0; padding:0}
+.caselist li{border-bottom:1px solid var(--line)}
+.caselist li:last-child{border-bottom:0}
+.caserow{
+  width:100%; display:grid; grid-template-columns:1fr auto; gap:4px 12px;
+  align-items:center; padding:13px 16px; background:none; border:0; cursor:pointer;
+  font-family:inherit; color:inherit; text-align:left;
+}
+.caserow:hover{background:var(--surface-2)}
+.caserow:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+.cid{font-family:var(--mono); font-size:14px; font-weight:600; letter-spacing:.02em}
+.cmeta{grid-column:1; font-size:11.5px; color:var(--faint); font-family:var(--mono); letter-spacing:.02em}
+.cright{grid-row:1/3; display:flex; flex-direction:column; align-items:flex-end; gap:5px}
+.bar{width:64px; height:4px; border-radius:2px; background:var(--line); overflow:hidden}
+.bar i{display:block; height:100%; background:var(--accent)}
+.chip{
+  font-size:10.5px; font-family:var(--mono); font-weight:600; letter-spacing:.04em;
+  padding:2px 7px; border-radius:20px; border:1px solid;
+}
+.chip.crit{color:var(--crit); border-color:var(--crit-line); background:var(--crit-soft)}
+.chip.warn{color:var(--warn); border-color:var(--warn-line); background:var(--warn-soft)}
+.chip.ok{color:var(--ok); border-color:transparent; background:transparent}
+.chip.sample{color:var(--warn); border-color:var(--warn-line); background:var(--warn-soft)}
+
+.empty-state{padding:34px 16px; text-align:center; color:var(--faint); font-size:13.5px}
+
+/* ---------- sticky action bar ---------- */
+.actionbar{
+  position:fixed; left:0; right:0; bottom:0; z-index:50;
+  background:var(--ground); border-top:1px solid var(--line);
+  padding:10px 18px calc(10px + env(safe-area-inset-bottom));
+}
+@supports (backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){
+  .actionbar{
+    background:color-mix(in srgb, var(--ground) 92%, transparent);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+  }
+}
+.actionbar .in{max-width:760px; margin:0 auto; display:flex; gap:9px; align-items:center}
+.actionbar .in .grow{flex:1; min-width:0}
+.savestate{font-size:11.5px; color:var(--faint); font-family:var(--mono); letter-spacing:.02em}
+
+/* ---------- section jump ---------- */
+.jump{
+  display:flex; gap:6px; overflow-x:auto; padding:10px 0 2px; margin:0 -18px;
+  padding-inline:18px; scrollbar-width:none;
+}
+.jump::-webkit-scrollbar{display:none}
+.jump button{
+  appearance:none; flex:0 0 auto; font-family:inherit; font-size:12px; font-weight:500;
+  padding:5px 11px; border-radius:20px; cursor:pointer; white-space:nowrap;
+  border:1px solid var(--line); background:var(--surface); color:var(--muted);
+}
+.jump button.done{color:var(--accent); border-color:var(--accent-soft); background:var(--accent-soft)}
+.jump button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+
+/* ---------- table (simple sheets) ---------- */
+.scroller{overflow-x:auto; margin:0 -16px; padding-inline:16px}
+table{border-collapse:collapse; font-size:13px; width:100%}
+th,td{text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); white-space:nowrap}
+th{font-size:11px; font-family:var(--mono); color:var(--faint); font-weight:600; letter-spacing:.03em}
+td.num{font-family:var(--mono); font-variant-numeric:tabular-nums}
+
+hr.rule{border:0; border-top:1px solid var(--line); margin:20px 0}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+@media (max-width:420px){
+  .wrap{padding-inline:14px}
+  .top-in{padding-inline:14px}
+  .actionbar{padding-inline:14px}
+  .jump{margin:0 -14px; padding-inline:14px}
+  .card .body{padding-inline:13px}
+  .field{grid-template-columns:30px 1fr; gap:0 8px}
+}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <h1>EA呼吸イベント登録</h1>
+      <span class="sub">SCMC / 多施設共同研究 v1.0</span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-cases" aria-selected="true" data-view="cases">症例<span class="n" id="n-cases">0</span></button>
+      <button class="tab" role="tab" id="tab-site" aria-selected="false" data-view="site">施設情報</button>
+      <button class="tab" role="tab" id="tab-excl" aria-selected="false" data-view="excl">除外例④<span class="n" id="n-excl">0</span></button>
+      <button class="tab" role="tab" id="tab-export" aria-selected="false" data-view="export">書き出し</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="main"></main>
+
+<div class="actionbar" id="actionbar"><div class="in" id="actionbar-in"></div></div>
+
+<script>
+"use strict";
+
+/* ════════ 1. 項目定義（列順＝配布Excel「入力シート」A〜CA列と一致） ════════ */
+const YN = ["はい","いいえ"];
+const AN = ["あり","なし"];
+
+const SECTIONS = [
+  { id:"base", name:"基本情報・適格性", note:"患者氏名・カルテ番号・生年月日は入力しないでください。日付はすべて<b>日齢</b>（出生日＝0日目）でご記入ください。", fields:[
+    ["caseId","症例番号（施設内の通し番号）","t",null,null,{req:1,help:"1, 2, 3… の通し番号です。症例を追加すると自動で入ります。カルテ番号・氏名は入力しないでください。"}],
+    ["site","施設名","t",null,null,{req:1,site:1}],
+    ["inc1","選択基準① Gross分類C型・一期的根治術を対象期間内（2014/1/1–2025/12/31）に施行","s",YN],
+    ["inc2","選択基準② 生後6か月の呼吸状況が確認可能","s",YN],
+    ["exc1","除外基準① Gross分類C型以外に該当","s",YN],
+    ["exc2","除外基準② 多段階手術を施行（一期的根治せず）","s",YN],
+    ["exc3","除外基準③ 二次性気管軟化（血管輪等）に該当","s",YN],
+    ["exc4","除外基準④ 初回根治術と同時にPT等の気道安定化手術を併施","s",YN],
+    ["exc5","除外基準⑤ 気管軟化と無関係の理由で月齢6未満に死亡／追跡不能","s",YN]
+  ]},
+  { id:"bg", name:"背景因子", fields:[
+    ["bw","出生体重(g)","n"],
+    ["ga","在胎週数(週)","n"],
+    ["gad","在胎日数(0-6)","n"],
+    ["chd","主要先天性心疾患の有無","s",AN,null,{help:"動脈管開存など軽微なものは除き、治療介入を要した／血行動態的に有意なものを「あり」"}],
+    ["chdName","主要先天性心疾患　病名（自由記載）","t",null,["chd","あり"]],
+    ["bpd","気管支肺異形成（BPD）の有無","s",AN,null,{help:"貴施設の診断基準に基づき判定"}],
+    ["vac","VACTERL連合の有無","s",AN],
+    ["gen","遺伝性疾患・染色体疾患の有無","s",AN],
+    ["genD","遺伝性疾患・染色体疾患の詳細（任意）","t",null,["gen","あり"]]
+  ]},
+  { id:"uedr", name:"UEDR（上部食道拡張度）", note:"根治術<b>前</b>レントゲンで計測。実測値2つを入力すると比が自動計算されます（Tröbs et al. Acta Paediatr 2018 に準拠）。", fields:[
+    ["ue","上部食道盲端最大横径(mm)","n",null,null,{flag:1}],
+    ["tv","第一胸椎横径(mm)","n",null,null,{flag:1}],
+    ["uedr","UEDR（自動計算）","c",null,null,{flag:1}]
+  ]},
+  { id:"op", name:"根治術", fields:[
+    ["opAge","根治術日齢(日)","n",null,null,{req:1,help:"遷延性呼吸補助の起算点および術後人工呼吸管理期間の算出に使う必須項目です"}],
+    ["appr","手術アプローチ","s",["胸腔鏡","開胸"]],
+    ["gapMm","食道間gap distance(mm)","n"],
+    ["gapV","食道間gap distance（椎体数）","n"],
+    ["gapM","gap distance評価方法","s",["画像評価","術中所見"]]
+  ]},
+  { id:"post", name:"術後経過", fields:[
+    ["extAge","根治術後初回抜管日齢(日)","n",null,null,{day:1,help:"抜管に至らず継続管理中の場合は空欄"}],
+    ["extType","根治術後初回抜管の別","s",["待機的","安定後速やかに","抜管困難","不明"],null,{help:"待機的挿管の後にさらに抜管困難であった場合は「抜管困難」を選択"}],
+    ["airw","気管軟化症以外の先天性気道異常・先天性肺／胸郭疾患の有無","s",AN,null,{help:"喉頭軟化症・気管狭窄・肺低形成・胸郭変形など"}],
+    ["airwName","上記の病名（自由記載）","t",null,["airw","あり"]],
+    ["cx","根治術後合併症（Clavien-Dindo IIIa以上・術後30日以内）の有無","s",AN],
+    ["cxD","根治術後合併症　詳細（自由記載）","t",null,["cx","あり"]],
+    ["oth","月齢6までに施行した根治術以外の手術の有無","s",AN],
+    ["othName","その手術の術式（自由記載）","t",null,["oth","あり"]],
+    ["othAge","その手術の日齢(日)","n",null,["oth","あり"],{day:1}],
+    ["othCx","その手術の術後合併症（CD IIIa以上・30日以内）の有無","s",AN,["oth","あり"]],
+    ["othCxD","その術後合併症　詳細（自由記載）","t",null,["othCx","あり"]]
+  ]},
+  { id:"resp", name:"呼吸イベント", note:"<b>Grade判定は行いません。</b>各項目の「有無」と「日齢」のみご記入ください。Grade分類は研究代表施設（埼玉県立小児医療センター）が一括して行います。同一項目に複数エピソードがある場合は初回の日齢を入力し、備考に追加分をご記入ください。", fields:[
+    ["hot","在宅酸素療法の有無","s",AN],
+    ["hotS","在宅酸素療法 開始日齢(日)","n",null,["hot","あり"],{day:1}],
+    ["hotE","在宅酸素療法 終了日齢(日)","n",null,["hot","あり"],{day:1,pair:"hotS",help:"継続中は空欄"}],
+    ["dcO2","退院時（または月齢6時点）の酸素投与継続の有無","s",AN],
+    ["hf","HFNCによる呼吸補助の有無","s",AN],
+    ["hfS","HFNC 開始日齢(日)","n",null,["hf","あり"],{day:1}],
+    ["hfE","HFNC 終了日齢(日)","n",null,["hf","あり"],{day:1,pair:"hfS",help:"継続中は空欄"}],
+    ["niv","CPAPまたはNPPVによる非侵襲的陽圧換気の有無","s",AN],
+    ["nivS","CPAP/NPPV 開始日齢(日)","n",null,["niv","あり"],{day:1}],
+    ["nivE","CPAP/NPPV 終了日齢(日)","n",null,["niv","あり"],{day:1,pair:"nivS",help:"継続中は空欄"}],
+    ["imv","予定外の気管内挿管・侵襲的人工呼吸管理の有無","s",AN],
+    ["imvS","侵襲的人工呼吸管理 開始日齢(日)","n",null,["imv","あり"],{day:1}],
+    ["imvE","侵襲的人工呼吸管理 終了日齢(日：抜管日)","n",null,["imv","あり"],{day:1,pair:"imvS",help:"継続中は空欄"}],
+    ["rei","初回抜管後の再挿管の有無","s",AN],
+    ["reiS","再挿管 日齢(日)","n",null,["rei","あり"],{day:1}],
+    ["reiE","再挿管後の抜管 日齢(日)","n",null,["rei","あり"],{day:1,pair:"reiS",help:"継続中は空欄"}],
+    ["trach","気管切開の有無","s",AN],
+    ["trachA","気管切開 実施日齢(日)","n",null,["trach","あり"],{day:1}],
+    ["pt","後方気管固定術の有無","s",AN],
+    ["ptA","後方気管固定術 実施日齢(日)","n",null,["pt","あり"],{day:1}],
+    ["ao","大動脈前方固定術その他の気道安定化手術の有無","s",AN],
+    ["aoA","気道安定化手術 実施日齢(日)","n",null,["ao","あり"],{day:1}],
+    ["aoN","気道安定化手術の術式名（自由記載）","t",null,["ao","あり"]],
+    ["death","重症呼吸不全に関連した死亡の有無","s",AN],
+    ["deathA","死亡日齢(日)","n",null,["death","あり"],{day:1}],
+    ["deathC","死因（自由記載）","t",null,["death","あり"]]
+  ]},
+  { id:"cause", name:"呼吸補助を要した理由", note:"最も重症であったイベントについて、主因を1つ選択してください。最終的なカテゴリ判定は研究代表施設が一括して行います。", fields:[
+    ["cause","呼吸補助を要した主因","s",["気道虚脱","上気道病変","肺実質病変・BPD","心疾患・心不全","呼吸器感染","中枢性・神経筋疾患","吻合部合併症","胃食道逆流・誤嚥","その他・不明"]],
+    ["cause2","呼吸補助を要した副因（複数可・自由記載）","t"],
+    ["basis","主因の判断根拠","s",["気管支鏡所見","dying spell等の臨床所見","画像所見","主治医記載のみ"]]
+  ]},
+  { id:"sec2", name:"副次項目（感染入院・BF・CT）", note:"BF・CTは<b>施行例のみ</b>ご記入ください。未施行例は空欄で構いません。", fields:[
+    ["adm","月齢6までの呼吸器感染入院回数","n"],
+    ["bf","BF（気管支鏡）施行の有無","s",AN],
+    ["bfM","BF施行月齢","n",null,["bf","あり"]],
+    ["bfF","BF所見（気道虚脱重症度）","t",null,["bf","あり"],{help:"例）呼気時の気管内腔虚脱率 80%"}],
+    ["ct","CT撮像の有無","s",AN],
+    ["ctA","CT撮像日齢(日)","n",null,["ct","あり"],{day:1}],
+    ["ctC","CT造影の有無","s",["造影あり","単純"],["ct","あり"]],
+    ["ctP","CT撮像時の呼吸相","s",["吸気相","呼気相","不明"],["ct","あり"]],
+    ["ctV","CT撮像時の気管挿管・陽圧換気の有無","s",["あり","なし","不明"],["ct","あり"]],
+    ["ctT","CTスライス厚(mm)","n",null,["ct","あり"]],
+    ["lar","LAR（気管横径／前後径比）","n",null,["ct","あり"],{help:"腕頭動脈が気管と交差するレベルのスライスで計測"}]
+  ]},
+  { id:"misc", name:"その他", fields:[
+    ["endR","追跡終了理由","t"],
+    ["memo","備考","a"]
+  ]}
+];
+
+const FIELDS = [];
+SECTIONS.forEach(s => s.fields.forEach(f => {
+  FIELDS.push({ sec:s.id, key:f[0], label:f[1], type:f[2], opts:f[3]||null, cond:f[4]||null, ...(f[5]||{}) });
+}));
+FIELDS.forEach((f,i) => { f.col = colLetter(i); });
+const BYKEY = Object.fromEntries(FIELDS.map(f => [f.key, f]));
+
+const SITE_FIELDS = [
+  ["site","施設名","t"],
+  ["policy","吻合部保護等を目的とした待機的挿管の方針","a"],
+  ["extTiming","標準的な抜管時期（術後日数の目安）","t"],
+  ["ctPolicy","術後CT撮像の適応方針","a"],
+  ["larOk","LAR計測の可否","s",["可","否","条件付きで可"]],
+  ["memo","備考","a"]
+].map((f,i) => ({key:f[0], label:f[1], type:f[2], opts:f[3]||null, col:colLetter(i)}));
+
+const EXCL_FIELDS = [
+  ["site","施設名","t"],
+  ["caseId","症例番号（施設内の通し番号）","t"],
+  ["bw","出生体重(g)","n"],
+  ["ga","在胎週数(週)","n"],
+  ["ue","上部食道盲端最大横径(mm)","n"],
+  ["tv","第一胸椎横径(mm)","n"],
+  ["uedr","UEDR（自動計算）","c"],
+  ["surg","併施した気道安定化手術","t"],
+  ["reason","当該手術の適応理由（自由記載）","a"],
+  ["basis","適応判断に用いた所見","s",["術前画像所見","術中気管支鏡所見","上部食道拡張度","その他"]],
+  ["memo","備考","a"]
+].map((f,i) => ({key:f[0], label:f[1], type:f[2], opts:f[3]||null, col:colLetter(i)}));
+
+function colLetter(i){ let s="", n=i+1; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26);} return s; }
+
+/* ════════ 2. 保存（端末内のみ。外部送信は一切ありません） ════════ */
+const LS_KEY = "ea-resp-entry/v1";
+const DAY6M = 183;
+
+const store = { site:{}, cases:[], excl:[] };
+let storageOK = true;
+
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ const d = JSON.parse(raw); Object.assign(store, {site:d.site||{}, cases:d.cases||[], excl:d.excl||[]}); return true; }
+  }catch(e){ storageOK = false; }
+  return false;
+}
+let saveTimer = null, saveMark = "";
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(store)); saveMark = "保存済 " + new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}); }
+  catch(e){ storageOK = false; saveMark = "保存できません"; }
+  const el = document.getElementById("savestate"); if(el) el.textContent = saveMark;
+}
+function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(save, 350); }
+
+/* ════════ 3. 計算・検証 ════════ */
+function uedrOf(r){
+  const a = num(r.ue), b = num(r.tv);
+  return (a !== null && b !== null && b !== 0) ? a/b : null;
+}
+function num(v){
+  if(v === "" || v === null || v === undefined) return null;
+  const n = Number(v); return isFinite(n) ? n : null;
+}
+function visible(f, r){ return !f.cond || r[f.cond[0]] === f.cond[1]; }
+function filled(f, r){
+  if(f.type === "c") return uedrOf(r) !== null;
+  const v = r[f.key]; return v !== "" && v !== null && v !== undefined;
+}
+function progress(r){
+  const vis = FIELDS.filter(f => visible(f, r) && f.type !== "c");
+  return { done: vis.filter(f => filled(f, r)).length, total: vis.length };
+}
+
+function validate(r){
+  const out = [];
+  const add = (level, key, msg) => out.push({level, key, msg});
+  const v = k => r[k], n = k => num(r[k]);
+
+  FIELDS.forEach(f => { if(f.req && visible(f,r) && !filled(f,r)) add("crit", f.key, "必須項目です"); });
+
+  if(v("inc1") === "いいえ") add("crit","inc1","選択基準①を満たさないため対象外です");
+  if(v("inc2") === "いいえ") add("crit","inc2","選択基準②を満たさないため対象外です");
+  [["exc1","①Gross分類C型以外"],["exc2","②多段階手術"],["exc3","③二次性気管軟化"],["exc5","⑤無関係の死亡・追跡不能"]]
+    .forEach(([k,t]) => { if(v(k) === "はい") add("crit", k, "除外基準"+t+"に該当するため、この症例は対象外です"); });
+  if(v("exc4") === "はい") add("crit","exc4","除外基準④に該当します。主解析からは除外されますが、「除外例④」タブへのご記入をお願いします");
+
+  const rng = (k,lo,hi,unit) => { const x = n(k); if(x !== null && (x < lo || x > hi)) add("warn", k, "通常は "+lo+"–"+hi+unit+" の範囲です。お確かめください"); };
+  rng("bw",300,6000,"g"); rng("ga",20,42,"週"); rng("gad",0,6,"日");
+  rng("ue",1,60,"mm"); rng("tv",1,40,"mm"); rng("adm",0,20,"回");
+
+  const u = uedrOf(r);
+  if(u !== null && (u < 0.3 || u > 6)) add("warn","uedr","UEDRが通常の範囲外です。横径・胸椎径の入力をお確かめください");
+
+  const op = n("opAge");
+  FIELDS.forEach(f => {
+    if(!f.day || !visible(f,r)) return;
+    const x = n(f.key); if(x === null) return;
+    if(x < 0) add("crit", f.key, "日齢は0以上で入力してください");
+    else if(x > DAY6M) add("warn", f.key, "月齢6（"+DAY6M+"日）を超えています");
+    if(op !== null && x < op && f.key !== "othAge") add("warn", f.key, "根治術日齢（"+op+"日）より前になっています");
+    if(f.pair){ const s = n(f.pair); if(s !== null && x < s) add("crit", f.key, "開始日齢（"+s+"日）より前になっています"); }
+  });
+  if(op !== null && (op < 0 || op > DAY6M)) add("warn","opAge","根治術日齢が0–"+DAY6M+"日の範囲外です");
+
+  const ext = n("extAge");
+  if(ext !== null && op !== null && ext < op) add("crit","extAge","初回抜管日齢が根治術日齢より前になっています");
+  if(v("rei") === "あり" && n("reiS") !== null && ext !== null && n("reiS") < ext)
+    add("warn","reiS","再挿管日齢が初回抜管日齢より前になっています");
+  if(v("exc4") !== "はい" && (v("pt") === "あり" || v("ao") === "あり") && op !== null){
+    const d = n("ptA") !== null ? n("ptA") : n("aoA");
+    if(d !== null && d === op) add("warn","exc4","気道安定化手術が根治術と同日です。除外基準④に該当しないかご確認ください");
+  }
+  return out;
+}
+function grade(r){
+  if(r.exc4 === "はい" || ["exc1","exc2","exc3","exc5"].some(k => r[k] === "はい")) return null;
+  const c = validate(r).filter(x => x.level === "crit").length;
+  const w = validate(r).filter(x => x.level === "warn").length;
+  return {c, w};
+}
+
+/* ════════ 4. 描画 ════════ */
+const main = document.getElementById("main");
+const barIn = document.getElementById("actionbar-in");
+let view = "cases", editing = null, openSec = {};
+
+function el(tag, attrs, ...kids){
+  const e = document.createElement(tag);
+  for(const k in (attrs||{})){
+    const val = attrs[k];
+    if(k === "class") e.className = val;
+    else if(k === "html") e.innerHTML = val;
+    else if(k.startsWith("on")) e.addEventListener(k.slice(2), val);
+    else if(val !== null && val !== undefined && val !== false) e.setAttribute(k, val);
+  }
+  kids.flat().forEach(c => { if(c !== null && c !== undefined && c !== false) e.append(c.nodeType ? c : String(c)); });
+  return e;
+}
+
+function render(){
+  main.replaceChildren();
+  barIn.replaceChildren();
+  simpleObjs = [];
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.view === view && editing === null)));
+  document.getElementById("n-cases").textContent = store.cases.length;
+  document.getElementById("n-excl").textContent = store.excl.length;
+  if(!storageOK) main.append(el("div",{class:"banner crit",html:"<b>この端末では入力内容を保存できません。</b>プライベートブラウズを解除するか、入力後すぐにExcelへ書き出してください。"}));
+  if(editing !== null) return renderForm();
+  if(view === "cases") return renderCases();
+  if(view === "site") return renderSite();
+  if(view === "excl") return renderExcl();
+  if(view === "export") return renderExport();
+}
+
+/* ---- 症例一覧 ---- */
+function renderCases(){
+  const hasSample = store.cases.some(c => c._sample);
+  if(hasSample){
+    main.append(el("div",{class:"banner warn"},
+      el("div",{html:"<b>サンプル症例が1件入っています。</b>操作確認用のダミーデータです。実データを入力する前に削除してください（削除するまでExcelへ書き出せません）。"}),
+      el("div",{class:"act"}, el("button",{class:"btn sm danger", onclick:()=>{ store.cases = store.cases.filter(c=>!c._sample); save(); render(); }},"サンプルを削除"))
+    ));
+  }
+  if(!store.site.site && store.cases.length){
+    main.append(el("div",{class:"banner info",html:"「施設情報」タブもご記入ください。施設間差を考慮した感度解析に使用します。"}));
+  }
+
+  const card = el("div",{class:"card"});
+  card.append(el("h2",{}, "症例一覧", el("span",{class:"count"}, store.cases.length + " 件")));
+  if(!store.cases.length){
+    card.append(el("div",{class:"empty-state"},"まだ症例がありません。下の「症例を追加」から入力を始めてください。"));
+  } else {
+    const ul = el("ul",{class:"caselist"});
+    store.cases.forEach((c, i) => {
+      const p = progress(c), g = grade(c);
+      const pct = p.total ? Math.round(p.done/p.total*100) : 0;
+      const u = uedrOf(c);
+      const right = el("div",{class:"cright"});
+      if(c._sample) right.append(el("span",{class:"chip sample"},"サンプル"));
+      else if(g && g.c) right.append(el("span",{class:"chip crit"},"要確認 "+g.c));
+      else if(g && g.w) right.append(el("span",{class:"chip warn"},"確認 "+g.w));
+      else if(!g) right.append(el("span",{class:"chip crit"},"対象外"));
+      else if(pct === 100) right.append(el("span",{class:"chip ok"},"完了"));
+      right.append(el("div",{class:"bar"}, el("i",{style:"width:"+pct+"%"})));
+      ul.append(el("li",{}, el("button",{class:"caserow", onclick:()=>{ editing = i; openSec = {base:1}; render(); window.scrollTo(0,0); }},
+        el("span",{class:"cid"}, c.caseId ? "症例 " + c.caseId : "（番号未入力）"),
+        el("span",{class:"cmeta"}, [
+          u !== null ? "UEDR "+u.toFixed(2) : null,
+          c.opAge !== "" && c.opAge != null ? "根治術 "+c.opAge+"日齢" : null,
+          p.done + "/" + p.total + " 項目"
+        ].filter(Boolean).join("  ·  ")),
+        right
+      )));
+    });
+    card.append(ul);
+  }
+  main.append(card);
+
+  main.append(el("div",{class:"note",html:"入力内容は<b>この端末のブラウザ内にのみ</b>保存されます。外部へ送信されることはありません。入力が済んだら「書き出し」タブからExcelファイルを作成し、これまでどおりメールでご送付ください。"}));
+
+  barIn.append(
+    el("button",{class:"btn primary grow", onclick:addCase},"＋ 症例を追加"),
+    el("span",{class:"savestate", id:"savestate"}, saveMark)
+  );
+}
+function nextSerial(){
+  let mx = 0;
+  store.cases.forEach(c => { const n = parseInt(c.caseId, 10); if(isFinite(n) && n > mx) mx = n; });
+  return mx + 1;
+}
+function addCase(){
+  const r = {};
+  FIELDS.forEach(f => r[f.key] = "");
+  r.caseId = String(nextSerial());
+  r.site = store.site.site || (store.cases.length ? store.cases[store.cases.length-1].site : "") || "";
+  store.cases.push(r);
+  editing = store.cases.length - 1;
+  openSec = {base:1};
+  save(); render(); window.scrollTo(0,0);
+}
+
+/* ---- 入力フォーム ---- */
+function renderForm(){
+  const r = store.cases[editing];
+  if(!r){ editing = null; return renderCases(); }
+  const issues = validate(r);
+  const byKey = {};
+  issues.forEach(i => { if(!byKey[i.key] || i.level === "crit") byKey[i.key] = i; });
+  const p = progress(r);
+
+  const allOpen = SECTIONS.every(s => openSec[s.id]);
+  main.append(el("div",{class:"jump"},
+    el("button",{onclick:()=>{ SECTIONS.forEach(s => openSec[s.id] = !allOpen); render(); }}, allOpen ? "すべて閉じる" : "すべて開く"),
+    SECTIONS.map(s => {
+      const vis = s.fields.map(f => BYKEY[f[0]]).filter(f => visible(f,r) && f.type !== "c");
+      const d = vis.filter(f => filled(f,r)).length;
+      return el("button",{class: vis.length && d === vis.length ? "done" : "", onclick:()=>{
+        openSec[s.id] = true; render();
+        requestAnimationFrame(()=>{ const t = document.getElementById("sec-"+s.id); if(t) t.scrollIntoView({block:"start", behavior:"smooth"}); });
+      }}, s.name + " " + d + "/" + vis.length);
+    })));
+
+  const crit = issues.filter(i => i.level === "crit");
+  if(crit.length){
+    main.append(el("div",{class:"banner crit"},
+      el("div",{html:"<b>確認が必要な項目が "+crit.length+" 件あります</b>"}),
+      el("ul",{}, crit.slice(0,6).map(i => el("li",{}, (BYKEY[i.key] ? BYKEY[i.key].col + "列 " + BYKEY[i.key].label.split("（")[0] : i.key) + " — " + i.msg)))
+    ));
+  }
+
+  SECTIONS.forEach(s => {
+    const open = !!openSec[s.id];
+    const vis = s.fields.map(f => BYKEY[f[0]]).filter(f => visible(f,r) && f.type !== "c");
+    const done = vis.filter(f => filled(f,r)).length;
+    const card = el("div",{class:"card", id:"sec-"+s.id});
+    card.append(el("h2",{style:"cursor:pointer", onclick:()=>{ openSec[s.id] = !open; render(); }},
+      el("span",{style:"color:var(--faint);font-family:var(--mono);font-size:11px"}, open ? "▾" : "▸"),
+      s.name,
+      el("span",{class:"count"}, done + "/" + vis.length)));
+    if(open){
+      const body = el("div",{class:"body"});
+      if(s.note) body.append(el("div",{class:"note", html:s.note}));
+      s.fields.forEach(fd => body.append(fieldRow(BYKEY[fd[0]], r, byKey[fd[0]])));
+      card.append(body);
+    }
+    main.append(card);
+  });
+
+  main.append(el("div",{style:"margin-top:18px;display:flex;gap:9px;flex-wrap:wrap"},
+    el("button",{class:"btn danger", onclick:()=>{
+      if(confirm("症例 "+(r.caseId||"（番号未入力）")+" を削除します。よろしいですか？")){
+        store.cases.splice(editing,1); editing = null; save(); render();
+      }
+    }},"この症例を削除")
+  ));
+
+  barIn.append(
+    el("button",{class:"btn ghost", onclick:()=>{ save(); editing = null; render(); window.scrollTo(0,0); }},"← 一覧"),
+    el("div",{class:"grow", style:"text-align:right"},
+      el("div",{class:"savestate"}, p.done + " / " + p.total + " 項目入力済"),
+      el("div",{class:"savestate", id:"savestate"}, saveMark)),
+    el("button",{class:"btn primary", onclick:()=>{ save(); editing = null; render(); window.scrollTo(0,0); }},"保存して一覧へ")
+  );
+}
+
+function fieldRow(f, r, issue){
+  const row = el("div",{class:"field" + (f.flag ? " flag" : "")});
+  row.append(el("div",{class:"col"}, f.col));
+  const lab = el("div",{class:"lab"}, f.label);
+  if(f.req) lab.append(el("span",{class:"req"},"*"));
+  row.append(lab);
+  const ctl = el("div",{class:"ctl"});
+  const id = "f-" + f.key;
+  const set = v => { r[f.key] = v; saveSoon(); };
+
+  if(f.type === "c"){
+    ctl.append(el("div",{class:"calc", id:"calc-" + f.key, html:calcHtml(r)}));
+  }
+  else if(f.type === "s" && f.opts.length <= 3){
+    const seg = el("div",{class:"seg"});
+    f.opts.forEach(o => seg.append(el("button",{type:"button", "aria-pressed":String(r[f.key] === o), onclick:()=>{
+      r[f.key] = (r[f.key] === o ? "" : o); save(); render();
+    }}, o)));
+    ctl.append(seg);
+  }
+  else if(f.type === "s"){
+    const sel = el("select",{id, onchange:e => { r[f.key] = e.target.value; save(); render(); }});
+    sel.append(el("option",{value:""},"— 未選択 —"));
+    f.opts.forEach(o => sel.append(el("option",{value:o, selected: r[f.key] === o || null}, o)));
+    if(issue && issue.level === "crit") sel.classList.add("bad");
+    ctl.append(sel);
+  }
+  else if(f.type === "a"){
+    ctl.append(el("textarea",{id, oninput:e => set(e.target.value)}, r[f.key] || ""));
+  }
+  else {
+    const inp = el("input",{
+      id, type: f.type === "n" ? "number" : "text",
+      inputmode: f.type === "n" ? "decimal" : null,
+      step: f.type === "n" ? "any" : null,
+      value: r[f.key] === null || r[f.key] === undefined ? "" : r[f.key],
+      oninput: e => { set(e.target.value); refreshDerived(); }
+    });
+    if(issue && issue.level === "crit") inp.classList.add("bad");
+    ctl.append(inp);
+  }
+
+  if(f.day) ctl.append(el("div",{class:"hint", id:"hint-" + f.key}, dayHint(f, r)));
+  if(f.help) ctl.append(el("div",{class:"hint", style:"font-family:var(--jp);letter-spacing:0"}, f.help));
+  ctl.append(el("div",{class:"msg " + (issue ? issue.level : ""), id:"msg-" + f.key}, issue ? issue.msg : ""));
+  row.append(ctl);
+  return row;
+}
+
+/* 入力中はDOMを作り直さず、派生表示（UEDR・日齢の目安・注意書き）だけを更新する */
+function calcHtml(r){
+  const u = uedrOf(r);
+  if(u === null) return '<span class="empty">横径と胸椎径を入力すると表示されます</span>';
+  return u.toFixed(3) + '<span class="expr">' + xesc(r.ue) + " ÷ " + xesc(r.tv) + " mm</span>";
+}
+function dayHint(f, r){
+  const x = num(r[f.key]), op = num(r.opAge);
+  if(x === null) return "";
+  const bits = [];
+  if(op !== null && f.key !== "opAge") bits.push("根治術後 " + (x - op) + " 日");
+  bits.push("月齢 " + (x/30.4).toFixed(1));
+  return bits.join("  ·  ");
+}
+function refreshDerived(){
+  const r = store.cases[editing];
+  if(!r) return;
+  const c = document.getElementById("calc-uedr");
+  if(c) c.innerHTML = calcHtml(r);
+  const byKey = {};
+  validate(r).forEach(i => { if(!byKey[i.key] || i.level === "crit") byKey[i.key] = i; });
+  FIELDS.forEach(f => {
+    const h = document.getElementById("hint-" + f.key);
+    if(h) h.textContent = dayHint(f, r);
+    const m = document.getElementById("msg-" + f.key);
+    if(m){ const is = byKey[f.key]; m.textContent = is ? is.msg : ""; m.className = "msg " + (is ? is.level : ""); }
+  });
+}
+
+/* ---- 施設情報 ---- */
+function renderSite(){
+  const card = el("div",{class:"card"});
+  card.append(el("h2",{},"施設情報"));
+  const body = el("div",{class:"body"});
+  body.append(el("div",{class:"note", html:"施設ごとに1行、術後管理方針とCT撮像の適応方針をご記入ください。<b>施設間差を考慮した感度解析</b>の解釈に用います。"}));
+  SITE_FIELDS.forEach(f => body.append(simpleRow(f, store.site)));
+  card.append(body);
+  main.append(card);
+  barIn.append(el("div",{class:"grow"}), el("button",{class:"btn primary", onclick:()=>{ save(); render(); }},"保存"), el("span",{class:"savestate", id:"savestate"}, saveMark));
+}
+
+/* ---- 除外例一覧 ---- */
+function renderExcl(){
+  main.append(el("div",{class:"banner info", html:"初回根治術と<b>同時に</b>後方気管固定術または大動脈前方つり上げ術を併施した症例（除外基準④該当例）をご記入ください。主解析からは除外しますが、<b>選択バイアスを評価する感度解析</b>に必要です。該当例がない施設は空欄で構いません。"}));
+  const card = el("div",{class:"card"});
+  card.append(el("h2",{},"除外例一覧（除外基準④）", el("span",{class:"count"}, store.excl.length + " 件")));
+  const body = el("div",{class:"body"});
+  if(!store.excl.length) body.append(el("div",{class:"empty-state"},"該当例はまだ登録されていません。"));
+  store.excl.forEach((r, i) => {
+    body.append(el("div",{style:"display:flex;align-items:center;gap:10px;padding:14px 0 4px;border-top:"+(i?"1px solid var(--line)":"0")},
+      el("strong",{style:"font-family:var(--mono);font-size:13px"}, "除外例 " + (i+1)),
+      el("button",{class:"btn sm danger", style:"margin-left:auto", onclick:()=>{
+        if(confirm("この除外例を削除します。よろしいですか？")){ store.excl.splice(i,1); save(); render(); }
+      }},"削除")));
+    EXCL_FIELDS.forEach(f => body.append(simpleRow(f, r)));
+  });
+  card.append(body);
+  main.append(card);
+  barIn.append(el("button",{class:"btn primary grow", onclick:()=>{
+    const r = {}; EXCL_FIELDS.forEach(f => r[f.key] = "");
+    r.site = store.site.site || ""; store.excl.push(r); save(); render();
+  }},"＋ 除外例を追加"), el("span",{class:"savestate", id:"savestate"}, saveMark));
+}
+
+let simpleObjs = [];
+function refreshSimpleCalcs(){
+  document.querySelectorAll("[data-oi]").forEach(elm => {
+    const o = simpleObjs[+elm.dataset.oi];
+    if(o) elm.innerHTML = calcHtml(o);
+  });
+}
+function simpleRow(f, obj){
+  let oi = simpleObjs.indexOf(obj);
+  if(oi < 0){ oi = simpleObjs.length; simpleObjs.push(obj); }
+  const row = el("div",{class:"field"});
+  row.append(el("div",{class:"col"}, f.col));
+  row.append(el("div",{class:"lab"}, f.label));
+  const ctl = el("div",{class:"ctl"});
+  const set = v => { obj[f.key] = v; saveSoon(); };
+  if(f.type === "c"){
+    ctl.append(el("div",{class:"calc", "data-oi":String(oi), html:calcHtml(obj)}));
+  } else if(f.type === "s"){
+    const sel = el("select",{onchange:e => { obj[f.key] = e.target.value; save(); }});
+    sel.append(el("option",{value:""},"— 未選択 —"));
+    f.opts.forEach(o => sel.append(el("option",{value:o, selected: obj[f.key] === o || null}, o)));
+    ctl.append(sel);
+  } else if(f.type === "a"){
+    ctl.append(el("textarea",{oninput:e => set(e.target.value)}, obj[f.key] || ""));
+  } else {
+    ctl.append(el("input",{type: f.type === "n" ? "number" : "text", inputmode: f.type === "n" ? "decimal" : null,
+      step: f.type === "n" ? "any" : null, value: obj[f.key] || "",
+      oninput:e => { set(e.target.value); if(f.type === "n") refreshSimpleCalcs(); }}));
+  }
+  row.append(ctl);
+  return row;
+}
+
+/* ---- 書き出し ---- */
+function renderExport(){
+  const sample = store.cases.filter(c => c._sample).length;
+  const critCases = store.cases.filter(c => !c._sample && validate(c).some(i => i.level === "crit"));
+  const incomplete = store.cases.filter(c => !c._sample && progress(c).done < progress(c).total);
+
+  const card = el("div",{class:"card"});
+  card.append(el("h2",{},"Excelへ書き出し"));
+  const body = el("div",{class:"body"});
+  body.append(el("div",{class:"note", html:"配布されている「多施設データ入力フォーム」と<b>同じ3シート・同じ列構成</b>のExcelファイル（.xlsx）を作成します。作成されたファイルを、これまでどおりメール等で研究代表施設へご送付ください。"}));
+
+  const tbl = el("table");
+  tbl.append(el("tr",{}, el("th",{},"シート"), el("th",{},"列数"), el("th",{},"行数")));
+  [["入力シート", FIELDS.length, store.cases.filter(c=>!c._sample).length],
+   ["施設情報", SITE_FIELDS.length, Object.values(store.site).some(v=>v) ? 1 : 0],
+   ["除外例一覧（除外基準④）", EXCL_FIELDS.length, store.excl.length]].forEach(row => {
+    tbl.append(el("tr",{}, el("td",{}, row[0]), el("td",{class:"num"}, row[1] + " 列（A–" + colLetter(row[1]-1) + "）"), el("td",{class:"num"}, row[2] + " 行")));
+  });
+  body.append(el("div",{class:"scroller"}, tbl));
+  card.append(body);
+  main.append(card);
+
+  if(sample) main.append(el("div",{class:"banner crit", html:"<b>サンプル症例が残っています。</b>「症例」タブで削除してから書き出してください。"}));
+  if(critCases.length) main.append(el("div",{class:"banner warn"},
+    el("div",{html:"<b>要確認の症例が "+critCases.length+" 件あります。</b>選択・除外基準や日齢の前後関係をご確認ください。書き出し自体は可能です。"}),
+    el("ul",{}, critCases.slice(0,5).map(c => el("li",{}, ("症例 "+(c.caseId||"?")) + " — " + validate(c).filter(i=>i.level==="crit")[0].msg)))));
+  if(incomplete.length) main.append(el("div",{class:"banner info", html:"未入力項目のある症例が "+incomplete.length+" 件あります。空欄のまま書き出しても構いません（欠損値として多重代入で扱われます）。"}));
+
+  const status = el("div",{class:"savestate", style:"margin-top:12px"});
+  main.append(el("div",{style:"margin-top:18px;display:flex;gap:9px;flex-wrap:wrap"},
+    el("button",{class:"btn primary", disabled: sample ? "" : null, onclick:()=>doExport("xlsx", status)},"Excelファイル（.xlsx）を作成"),
+    el("button",{class:"btn", disabled: sample ? "" : null, onclick:()=>doExport("csv", status)},"入力シートのみCSV")
+  ), status);
+
+  main.append(el("hr",{class:"rule"}));
+  main.append(el("div",{class:"note", html:"<b>データはこの端末から出ません。</b>ファイルはブラウザ内で組み立てられ、サーバーへ送信されることはありません。端末を変えると入力内容は引き継がれないため、入力が済んだ分はこまめに書き出して保管してください。"}));
+
+  barIn.append(el("div",{class:"grow"}), el("span",{class:"savestate", id:"savestate"}, saveMark));
+}
+
+async function doExport(kind, status){
+  const rows = store.cases.filter(c => !c._sample);
+  status.textContent = "作成中…";
+  try{
+    const stamp = new Date().toISOString().slice(0,10).replace(/-/g,"");
+    const site = (store.site.site || rows[0]?.site || "施設").replace(/[\\/:*?"<>|]/g,"");
+    let blob, name;
+    if(kind === "csv"){
+      const head = FIELDS.map(f => f.label);
+      const lines = [head].concat(rows.map(r => FIELDS.map(f => f.type === "c" ? (uedrOf(r) ?? "") : (r[f.key] ?? ""))));
+      const csv = "﻿" + lines.map(l => l.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(",")).join("\r\n");
+      blob = new Blob([csv], {type:"text/csv"});
+      name = "EA呼吸イベント_入力シート_" + site + "_" + stamp + ".csv";
+    } else {
+      blob = buildXlsx(rows);
+      name = "多施設データ入力フォーム_" + site + "_" + stamp + ".xlsx";
+    }
+    const res = await offerFile(name, blob);
+    status.textContent = res === "saved" ? "作成しました：" + name
+      : res === "declined" ? "保存はキャンセルされました。"
+      : "この画面ではファイルを保存できませんでした（" + res + "）。";
+  }catch(e){
+    status.textContent = "書き出しに失敗しました：" + (e && e.message ? e.message : e);
+  }
+}
+
+let dlPromise = null;
+async function offerFile(filename, blob){
+  try{
+    const dl = dlPromise ? await dlPromise : null;
+    if(dl){ const r = await dl.save({filename, data:blob}); return r.status === "delivered" ? "saved" : "saved"; }
+  }catch(e){ return (e && e.code) || "error"; }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.style.display = "none";
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  return "saved";
+}
+
+/* ════════ 5. xlsx 生成（外部ライブラリなし） ════════ */
+function xesc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,""); }
+function sheetXml(grid){
+  let out = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+  grid.forEach((row, ri) => {
+    out += '<row r="' + (ri+1) + '">';
+    row.forEach((v, ci) => {
+      if(v === "" || v === null || v === undefined) return;
+      const ref = colLetter(ci) + (ri+1), st = ri === 0 ? ' s="1"' : "";
+      if(typeof v === "number" && isFinite(v)) out += '<c r="' + ref + '"' + st + '><v>' + v + '</v></c>';
+      else out += '<c r="' + ref + '"' + st + ' t="inlineStr"><is><t xml:space="preserve">' + xesc(v) + '</t></is></c>';
+    });
+    out += "</row>";
+  });
+  return out + "</sheetData></worksheet>";
+}
+function buildXlsx(rows){
+  const sheets = [
+    { name:"入力シート", grid:[FIELDS.map(f => f.label)].concat(rows.map(r => FIELDS.map(f => cellOf(f, r)))) },
+    { name:"施設情報", grid:[SITE_FIELDS.map(f => f.label)].concat(Object.values(store.site).some(v => v) ? [SITE_FIELDS.map(f => cellOf(f, store.site))] : []) },
+    { name:"除外例一覧（除外基準④）", grid:[EXCL_FIELDS.map(f => f.label)].concat(store.excl.map(r => EXCL_FIELDS.map(f => cellOf(f, r)))) }
+  ];
+  const ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+    + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+    + sheets.map((s,i) => '<Override PartName="/xl/worksheets/sheet' + (i+1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join("")
+    + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+  const rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  const wbXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
+    + sheets.map((s,i) => '<sheet name="' + xesc(s.name) + '" sheetId="' + (i+1) + '" r:id="rId' + (i+1) + '"/>').join("") + '</sheets></workbook>';
+  const wbRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    + sheets.map((s,i) => '<Relationship Id="rId' + (i+1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i+1) + '.xml"/>').join("")
+    + '<Relationship Id="rId' + (sheets.length+1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+  const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    + '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
+    + '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+    + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+    + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    + '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>'
+    + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+
+  const files = [
+    {name:"[Content_Types].xml", data:ct},
+    {name:"_rels/.rels", data:rootRels},
+    {name:"xl/workbook.xml", data:wbXml},
+    {name:"xl/_rels/workbook.xml.rels", data:wbRels},
+    {name:"xl/styles.xml", data:styles}
+  ].concat(sheets.map((s,i) => ({name:"xl/worksheets/sheet" + (i+1) + ".xml", data:sheetXml(s.grid)})));
+  return zipStore(files);
+}
+function cellOf(f, r){
+  if(f.type === "c"){ const u = uedrOf(r); return u === null ? "" : Math.round(u*1e6)/1e6; }
+  const v = r[f.key];
+  if(v === "" || v === null || v === undefined) return "";
+  if(f.type === "n"){ const n = Number(v); return isFinite(n) ? n : String(v); }
+  return String(v);
+}
+
+let CRCT = null;
+function crc32(buf){
+  if(!CRCT){ CRCT = new Uint32Array(256);
+    for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); CRCT[n] = c >>> 0; } }
+  let c = 0xFFFFFFFF;
+  for(let i = 0; i < buf.length; i++) c = CRCT[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function zipStore(files){
+  const enc = new TextEncoder(), d = new Date();
+  const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  const local = [], central = [];
+  let off = 0;
+  for(const f of files){
+    const nm = enc.encode(f.name), data = typeof f.data === "string" ? enc.encode(f.data) : f.data;
+    const crc = crc32(data), sz = data.length;
+    const h = new Uint8Array(30 + nm.length), hv = new DataView(h.buffer);
+    hv.setUint32(0, 0x04034b50, true); hv.setUint16(4, 20, true); hv.setUint16(6, 0x0800, true);
+    hv.setUint16(8, 0, true); hv.setUint16(10, dosTime, true); hv.setUint16(12, dosDate, true);
+    hv.setUint32(14, crc, true); hv.setUint32(18, sz, true); hv.setUint32(22, sz, true);
+    hv.setUint16(26, nm.length, true); hv.setUint16(28, 0, true); h.set(nm, 30);
+    local.push(h, data);
+    const c = new Uint8Array(46 + nm.length), cv = new DataView(c.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true); cv.setUint16(10, 0, true);
+    cv.setUint16(12, dosTime, true); cv.setUint16(14, dosDate, true);
+    cv.setUint32(16, crc, true); cv.setUint32(20, sz, true); cv.setUint32(24, sz, true);
+    cv.setUint16(28, nm.length, true); cv.setUint16(30, 0, true); cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true); cv.setUint16(36, 0, true); cv.setUint32(38, 0, true); cv.setUint32(42, off, true);
+    c.set(nm, 46); central.push(c);
+    off += h.length + sz;
+  }
+  let cdSize = 0; central.forEach(c => cdSize += c.length);
+  const e = new Uint8Array(22), ev = new DataView(e.buffer);
+  ev.setUint32(0, 0x06054b50, true); ev.setUint16(4, 0, true); ev.setUint16(6, 0, true);
+  ev.setUint16(8, central.length, true); ev.setUint16(10, central.length, true);
+  ev.setUint32(12, cdSize, true); ev.setUint32(16, off, true); ev.setUint16(20, 0, true);
+  return new Blob(local.concat(central, [e]), {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+
+/* ════════ 6. 起動 ════════ */
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  if(editing !== null) save();
+  editing = null; view = t.dataset.view; render(); window.scrollTo(0,0);
+}));
+
+if(!load()){
+  const s = {};
+  FIELDS.forEach(f => s[f.key] = "");
+  Object.assign(s, {
+    _sample:true, caseId:"SAMPLE-01", site:"サンプル病院",
+    inc1:"はい", inc2:"はい", exc1:"いいえ", exc2:"いいえ", exc3:"いいえ", exc4:"いいえ", exc5:"いいえ",
+    bw:2180, ga:36, gad:2, chd:"あり", chdName:"心室中隔欠損症", bpd:"なし", vac:"なし", gen:"なし",
+    ue:19.4, tv:12.1, opAge:2, appr:"胸腔鏡", gapMm:12, gapM:"画像評価",
+    extAge:9, extType:"待機的", airw:"なし", cx:"なし", oth:"なし",
+    hot:"なし", dcO2:"なし", hf:"あり", hfS:34, hfE:96, niv:"なし", imv:"なし", rei:"あり", reiS:31, reiE:34,
+    trach:"なし", pt:"なし", ao:"なし", death:"なし",
+    cause:"気道虚脱", basis:"気管支鏡所見", adm:1,
+    bf:"あり", bfM:2, bfF:"呼気時の気管内腔虚脱率 約80%", ct:"なし",
+    memo:"操作確認用のサンプルです。削除してからご使用ください。"
+  });
+  store.cases.push(s);
+}
+if(window.claude && typeof window.claude.use === "function"){
+  dlPromise = window.claude.use("downloads").catch(() => null);
+}
+render();
+</script>

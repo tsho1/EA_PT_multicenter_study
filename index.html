@@ -272,11 +272,13 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:20px 0}
 /* ════════ 1. 項目定義（列順＝配布Excel「入力シート」A〜CA列と一致） ════════ */
 const YN = ["はい","いいえ"];
 const AN = ["あり","なし"];
+/* 参加10施設（あいうえお順。清音→濁音の順で並べている） */
+const SITES = ["旭川医科大学","群馬小児","埼玉小児","順天堂大学","成育","天使","東京大学","道立子ども","名古屋大学","北海道大学"];
 
 const SECTIONS = [
   { id:"base", name:"基本情報・適格性", note:"患者氏名・カルテ番号・生年月日は入力しないでください。日付はすべて<b>日齢</b>（出生日＝0日目）でご記入ください。", fields:[
     ["caseId","症例番号（施設内の通し番号）","t",null,null,{req:1,help:"1, 2, 3… の通し番号です。症例を追加すると自動で入ります。カルテ番号・氏名は入力しないでください。"}],
-    ["site","施設名","t",null,null,{req:1,site:1}],
+    ["site","施設名","s",SITES,null,{req:1}],
     ["inc1","選択基準① Gross分類C型・一期的根治術を対象期間内（2014/1/1–2025/12/31）に施行","s",YN],
     ["inc2","選択基準② 生後6か月の呼吸状況が確認可能","s",YN],
     ["exc1","除外基準① Gross分類C型以外に該当","s",YN],
@@ -381,7 +383,7 @@ FIELDS.forEach((f,i) => { f.col = colLetter(i); });
 const BYKEY = Object.fromEntries(FIELDS.map(f => [f.key, f]));
 
 const SITE_FIELDS = [
-  ["site","施設名","t"],
+  ["site","施設名","s",SITES],
   ["policy","吻合部保護等を目的とした待機的挿管の方針","a"],
   ["extTiming","標準的な抜管時期（術後日数の目安）","t"],
   ["ctPolicy","術後CT撮像の適応方針","a"],
@@ -390,7 +392,7 @@ const SITE_FIELDS = [
 ].map((f,i) => ({key:f[0], label:f[1], type:f[2], opts:f[3]||null, col:colLetter(i)}));
 
 const EXCL_FIELDS = [
-  ["site","施設名","t"],
+  ["site","施設名","s",SITES],
   ["caseId","症例番号（施設内の通し番号）","t"],
   ["bw","出生体重(g)","n"],
   ["ga","在胎週数(週)","n"],
@@ -994,7 +996,7 @@ if(!load()){
   const s = {};
   FIELDS.forEach(f => s[f.key] = "");
   Object.assign(s, {
-    _sample:true, caseId:"SAMPLE-01", site:"サンプル病院",
+    _sample:true, caseId:"SAMPLE-01", site:"埼玉小児",
     inc1:"はい", inc2:"はい", exc1:"いいえ", exc2:"いいえ", exc3:"いいえ", exc4:"いいえ", exc5:"いいえ",
     bw:2180, ga:36, gad:2, chd:"あり", chdName:"心室中隔欠損症", bpd:"なし", vac:"なし", gen:"なし",
     ue:19.4, tv:12.1, opAge:2, appr:"胸腔鏡", gapMm:12, gapM:"画像評価",

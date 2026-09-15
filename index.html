@@ -279,7 +279,7 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:20px 0}
   <div class="top-in">
     <div class="brand">
       <h1>EA呼吸イベント登録</h1>
-      <span class="sub">v3.0 · 2026-09-12 · SCMC</span>
+      <span class="sub">v3.1 · 2026-09-15 · SCMC</span>
     </div>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" id="tab-cases" aria-selected="true" data-view="cases">症例<span class="n" id="n-cases">0</span></button>
@@ -322,13 +322,14 @@ const othShow = n => r => {
 const othCxShow = n => r => othShow(n)(r) && r["oth" + n + "Cx"] === "あり";
 
 const SECTIONS = [
-  { id:"base", name:"基本情報・適格性", note:"患者氏名・カルテ番号・生年月日は入力しないでください。日付はすべて<b>日齢</b>（出生日＝0日目）でご記入ください。<br>まずこの欄の適格性をご判定ください。<b>対象外と判定された場合は、以降の項目は表示されず入力不要になります。</b>", fields:[
+  { id:"base", name:"基本情報・適格性", note:"患者氏名・カルテ番号は入力しないでください。日付はカレンダーからそのままご入力いただけます。<b>日齢はこのブラウザ内で自動計算され、書き出すファイルには日齢のみが出力されます</b>（出生日を含む暦日はファイルに出力されません）。<br>まずこの欄の適格性をご判定ください。<b>対象外と判定された場合は、以降の項目は表示されず入力不要になります。</b>", fields:[
     ["caseId","症例番号（施設内の通し番号）","t",null,null,{req:1,help:"1, 2, 3… の通し番号です。症例を追加すると自動で入ります。カルテ番号・氏名は入力しないでください。"}],
     ["site","施設名","s",SITES,null,{req:1}],
-    ["inc1","選択基準① Gross分類C型・一期的根治術を対象期間内（2014/1/1–2025/12/31）に施行","s",YN],
+    ["birth","出生日","n",null,null,{birth:1,help:"日齢の計算にのみ使用します。書き出すファイルに出生日は出力されません"}],
+    ["inc1","選択基準① Gross分類C型・対象期間内（2014/1/1–2025/12/31）かつ日齢28未満に食道閉鎖根治術を施行","s",YN,null,{help:"胃破裂予防等を目的とした胃瘻造設が根治術に先行していても、食道閉鎖根治術が日齢28未満に施行されていれば「はい」です"}],
     ["inc2","選択基準② 生後6か月の呼吸状況が確認可能","s",YN],
     ["exc1","除外基準① Gross分類C型以外に該当","s",YN],
-    ["exc2","除外基準② 多段階手術を施行（一期的根治せず）","s",YN],
+    ["exc2","除外基準② 食道閉鎖根治術が日齢28以降（long gap等により新生児期に完遂できず多段階手術）","s",YN],
     ["exc3","除外基準③ 二次性気管軟化（血管輪等）に該当","s",YN],
     ["exc4","除外基準④ 食道閉鎖根治術と同時に後方気管固定術等の気道安定化手術を併施","s",YN],
     ["exc5","除外基準⑤ 気管軟化と無関係の理由で月齢6未満に死亡／追跡不能","s",YN]
@@ -344,13 +345,15 @@ const SECTIONS = [
     ["gen","遺伝性疾患・染色体疾患の有無","s",AN3],
     ["genD","遺伝性疾患・染色体疾患の詳細（任意）","t",null,["gen","あり"]]
   ]},
-  { id:"uedr", name:"UEDR（上部食道拡張度）", note:"<b>診断時（初回手術前）</b>の胸部単純写真で計測してください。本研究の対象は一期的根治例のみで、食道閉鎖根治術は生後数日以内に行われるため、これは根治術前の画像と実質的に同一です。実測値2つを入力すると比が自動計算されます（Tröbs et al. Acta Paediatr 2018 の手法を参考にしています）。", fields:[
+  { id:"uedr", name:"UEDR（上部食道拡張度）", note:"<b>診断時（初回手術前）</b>の胸部単純写真で計測してください。胃瘻造設が食道閉鎖根治術に先行した症例では、胃瘻造設前（診断時）の画像で計測してください。実測値2つを入力すると比が自動計算されます（Tröbs et al. Acta Paediatr 2018 の手法を参考にしています）。", fields:[
     ["ue","上部食道盲端最大横径(mm)","n",null,null,{flag:1}],
     ["tv","第一胸椎横径(mm)","n",null,null,{flag:1}],
     ["uedr","UEDR（自動計算）","c",null,null,{flag:1,num:"ue",den:"tv",dp:3}]
   ]},
   { id:"op", name:"根治術", fields:[
-    ["opAge","根治術日齢(日)","n",null,null,{req:1,help:"遷延性呼吸補助の起算点および術後人工呼吸管理期間の算出に使う必須項目です"}],
+    ["gastro","食道閉鎖根治術前の胃瘻造設の有無","s",AN,null,{help:"胃破裂予防等を目的として、食道閉鎖根治術に先行して胃瘻を造設した場合は「あり」"}],
+    ["gastroAge","胃瘻造設日齢(日)","n",null,["gastro","あり"],{day:1}],
+    ["opAge","食道閉鎖根治術日齢(日)","n",null,null,{day:1,req:1,help:"遷延性呼吸補助の起算点および術後人工呼吸管理期間の算出に使う必須項目です"}],
     ["appr","手術アプローチ","s",["胸腔鏡","開胸"]],
     ["gapMm","食道間gap distance(mm)","n"],
     ["gapV","食道間gap distance（椎体数）","s",["0.5","1.0","1.5","2.0","2.5","3.0","3.5","4.0","4.5","5.0"],null,{seg:1,asNumber:1,help:"0.5椎体単位でご選択ください。同じ値をもう一度押すと選択を解除できます"}],
@@ -483,7 +486,10 @@ const FIELDS = [];
 SECTIONS.forEach(s => s.fields.forEach(f => {
   FIELDS.push({ sec:s.id, key:f[0], label:f[1], type:f[2], opts:f[3]||null, cond:f[4]||null, ...(f[5]||{}) });
 }));
-FIELDS.forEach((f,i) => { f.col = colLetter(i); });
+/* 出生日は日齢の計算にのみ用い、書き出しには含めない */
+const EXPORT_FIELDS = FIELDS.filter(f => !f.birth);
+EXPORT_FIELDS.forEach((f,i) => { f.col = colLetter(i); });
+FIELDS.filter(f => f.birth).forEach(f => { f.col = "—"; });
 const BYKEY = Object.fromEntries(FIELDS.map(f => [f.key, f]));
 
 const SITE_FIELDS = [
@@ -539,6 +545,24 @@ function ratioOf(f, r){
   return (a !== null && b !== null && b !== 0) ? a/b : null;
 }
 function uedrOf(r){ return ratioOf({num:"ue", den:"tv"}, r); }
+/* 日齢は保存せず、出生日と各イベントの日付から都度計算する。
+   入力は日付だが、書き出す際は日齢に換算するため、暦日は端末外に出ない。 */
+function toDate(v){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v == null ? "" : v).trim());
+  if(!m) return null;
+  const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return isNaN(d.getTime()) ? null : d;
+}
+function dayAge(r, key){
+  const b = toDate(r.birth), d = toDate(r[key]);
+  if(!b || !d) return null;
+  return Math.round((d - b) / 86400000);
+}
+/* 日付項目は日齢に、それ以外は数値に変換して返す */
+function dnum(r, key){
+  const f = BYKEY[key];
+  return (f && f.day) ? dayAge(r, key) : num(r[key]);
+}
 function num(v){
   if(v === "" || v === null || v === undefined) return null;
   const n = Number(v); return isFinite(n) ? n : null;
@@ -550,7 +574,7 @@ function num(v){
    「除外例④」タブへの記入に誘導する。 */
 const EXC_LABELS = [
   ["exc1","①Gross分類C型以外"],
-  ["exc2","②多段階手術（一期的根治せず）"],
+  ["exc2","②食道閉鎖根治術が日齢28以降（多段階手術）"],
   ["exc3","③二次性気管軟化（血管輪等）"],
   ["exc5","⑤気管軟化と無関係の死亡・追跡不能"]
 ];
@@ -581,7 +605,7 @@ function progress(r){
 function validate(r){
   const out = [];
   const add = (level, key, msg) => out.push({level, key, msg});
-  const v = k => r[k], n = k => num(r[k]);
+  const v = k => r[k], n = k => dnum(r, k);
 
   FIELDS.forEach(f => { if(f.req && visible(f,r) && !filled(f,r)) add("crit", f.key, "必須項目です"); });
 
@@ -596,19 +620,23 @@ function validate(r){
   rng("adm",0,20,"回");
   /* UEDR関連（上部食道盲端最大横径・第一胸椎横径・UEDR）は計測値の幅が広いため範囲チェックを行わない */
 
+  if(!r.birth && FIELDS.some(f => f.day && r[f.key])) add("crit","birth","日齢の計算に出生日が必要です");
   const op = n("opAge");
   FIELDS.forEach(f => {
     if(!f.day || !visible(f,r)) return;
     const x = n(f.key); if(x === null) return;
-    if(x < 0) add("crit", f.key, "日齢は0以上で入力してください");
+    if(x < 0) add("crit", f.key, "出生日より前の日付になっています");
     else if(x > DAY6M) add("warn", f.key, "月齢6（"+DAY6M+"日）を超えています");
-    if(op !== null && x < op && !f.key.startsWith("oth")) add("warn", f.key, "根治術日齢（"+op+"日）より前になっています");
+    if(op !== null && x < op && !f.key.startsWith("oth") && f.key !== "gastroAge") add("warn", f.key, "根治術日齢（"+op+"日）より前になっています");
     if(f.pair){ const s = n(f.pair); if(s !== null && x < s) add("crit", f.key, "開始日齢（"+s+"日）より前になっています"); }
   });
   if(op !== null && (op < 0 || op > DAY6M)) add("warn","opAge","根治術日齢が0–"+DAY6M+"日の範囲外です");
 
   const ext = n("extAge");
   if(ext !== null && op !== null && ext < op) add("crit","extAge","初回抜管日齢が根治術日齢より前になっています");
+  const gs = n("gastroAge");
+  if(v("gastro") === "あり" && gs !== null && op !== null && gs > op) add("warn","gastroAge","胃瘻造設日が食道閉鎖根治術日より後になっています（根治術に先行した胃瘻造設が対象です）");
+  if(v("inc1") === "はい" && op !== null && op >= 28) add("warn","inc1","食道閉鎖根治術が日齢"+op+"に施行されています。日齢28以降の場合は選択基準①を満たさず、除外基準②に該当します");
   if(v("rei") === "あり" && n("reiS") !== null && ext !== null && n("reiS") < ext)
     add("warn","reiS","再挿管日齢が初回抜管日齢より前になっています");
   if(v("exc4") !== "はい" && (v("pt") === "あり" || v("ao") === "あり") && op !== null){
@@ -705,7 +733,7 @@ function renderCases(){
         el("span",{class:"cid"}, c.caseId ? "症例 " + c.caseId : "（番号未入力）"),
         el("span",{class:"cmeta"}, [
           u !== null ? "UEDR "+u.toFixed(2) : null,
-          c.opAge !== "" && c.opAge != null ? "根治術 "+c.opAge+"日齢" : null,
+          dayAge(c,"opAge") !== null ? "根治術 " + dayAge(c,"opAge") + "日齢" : null,
           p.done + "/" + p.total + " 項目"
         ].filter(Boolean).join("  ·  ")),
         right
@@ -825,7 +853,7 @@ function renderForm(){
 function fieldRow(f, r, issue){
   const row = el("div",{class:"field" + (f.flag ? " flag" : "")});
   row.append(el("div",{class:"col"}, f.col));
-  const lab = el("div",{class:"lab"}, f.label);
+  const lab = el("div",{class:"lab"}, f.day ? f.label.replace("日齢(日：抜管日)","日（抜管日）").replace("日齢(日)","日") : f.label);
   if(f.req) lab.append(el("span",{class:"req"},"*"));
   row.append(lab);
   const ctl = el("div",{class:"ctl"});
@@ -866,9 +894,9 @@ function fieldRow(f, r, issue){
   }
   else {
     const inp = el("input",{
-      id, type: f.type === "n" ? "number" : "text",
-      inputmode: f.type === "n" ? "decimal" : null,
-      step: f.type === "n" ? "any" : null,
+      id, type: (f.day || f.birth) ? "date" : (f.type === "n" ? "number" : "text"),
+      inputmode: (!f.day && !f.birth && f.type === "n") ? "decimal" : null,
+      step: (!f.day && !f.birth && f.type === "n") ? "any" : null,
       value: r[f.key] === null || r[f.key] === undefined ? "" : r[f.key],
       oninput: e => { set(e.target.value); refreshDerived(); }
     });
@@ -890,10 +918,10 @@ function calcHtml(f, r){
   return u.toFixed(f.dp || 3) + '<span class="expr">' + xesc(r[f.num]) + " ÷ " + xesc(r[f.den]) + " mm</span>";
 }
 function dayHint(f, r){
-  const x = num(r[f.key]), op = num(r.opAge);
-  if(x === null) return "";
-  const bits = [];
-  if(op !== null && f.key !== "opAge") bits.push("根治術後 " + (x - op) + " 日");
+  const x = dayAge(r, f.key), op = dayAge(r, "opAge");
+  if(x === null) return (r[f.key] && !r.birth) ? "出生日を入力すると日齢が表示されます" : "";
+  const bits = ["日齢 " + x + " 日"];
+  if(op !== null && f.key !== "opAge") bits.push(x < op ? "根治術前 " + (op - x) + " 日" : "根治術後 " + (x - op) + " 日");
   bits.push("月齢 " + (x/30.4).toFixed(1));
   return bits.join("  ·  ");
 }
@@ -997,7 +1025,7 @@ function renderExport(){
 
   const tbl = el("table");
   tbl.append(el("tr",{}, el("th",{},"シート"), el("th",{},"列数"), el("th",{},"行数")));
-  [["入力シート", FIELDS.length, rows.length],
+  [["入力シート", EXPORT_FIELDS.length, rows.length],
    ["施設情報", SITE_FIELDS.length, Object.values(store.site).some(v=>v) ? 1 : 0],
    ["除外例一覧（除外基準④）", EXCL_FIELDS.length, store.excl.length]].forEach(row => {
     tbl.append(el("tr",{}, el("td",{}, row[0]), el("td",{class:"num"}, row[1] + " 列（A–" + colLetter(row[1]-1) + "）"), el("td",{class:"num"}, row[2] + " 行")));
@@ -1036,8 +1064,8 @@ async function doExport(kind, status){
     const site = (store.site.site || rows[0]?.site || "施設").replace(/[\\/:*?"<>|]/g,"");
     let blob, name;
     if(kind === "csv"){
-      const head = FIELDS.map(f => f.label);
-      const lines = [head].concat(rows.map(r => FIELDS.map(f => f.type === "c" ? (ratioOf(f, r) ?? "") : (r[f.key] ?? ""))));
+      const head = EXPORT_FIELDS.map(f => f.label);
+      const lines = [head].concat(rows.map(r => EXPORT_FIELDS.map(f => cellOf(f, r))));
       const csv = "﻿" + lines.map(l => l.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(",")).join("\r\n");
       blob = new Blob([csv], {type:"text/csv"});
       name = "EA呼吸イベント_入力シート_" + site + "_" + stamp + ".csv";
@@ -1086,7 +1114,7 @@ function sheetXml(grid){
 }
 function buildXlsx(rows){
   const sheets = [
-    { name:"入力シート", grid:[FIELDS.map(f => f.label)].concat(rows.map(r => FIELDS.map(f => cellOf(f, r)))) },
+    { name:"入力シート", grid:[EXPORT_FIELDS.map(f => f.label)].concat(rows.map(r => EXPORT_FIELDS.map(f => cellOf(f, r)))) },
     { name:"施設情報", grid:[SITE_FIELDS.map(f => f.label)].concat(Object.values(store.site).some(v => v) ? [SITE_FIELDS.map(f => cellOf(f, store.site))] : []) },
     { name:"除外例一覧（除外基準④）", grid:[EXCL_FIELDS.map(f => f.label)].concat(store.excl.map(r => EXCL_FIELDS.map(f => cellOf(f, r)))) }
   ];
@@ -1121,6 +1149,8 @@ function buildXlsx(rows){
 }
 function cellOf(f, r){
   if(f.type === "c"){ const u = ratioOf(f, r); return u === null ? "" : Math.round(u*1e6)/1e6; }
+  /* 日付で入力された項目は日齢に換算して書き出す（暦日はファイルに出力しない） */
+  if(f.day){ const d = dayAge(r, f.key); return d === null ? "" : d; }
   const v = r[f.key];
   if(v === "" || v === null || v === undefined) return "";
   /* asNumber は選択式だが解析上は連続量として扱う項目（椎体数など） */
@@ -1182,11 +1212,11 @@ if(!load()){
     _sample:true, caseId:"SAMPLE-01", site:"埼玉小児",
     inc1:"はい", inc2:"はい", exc1:"いいえ", exc2:"いいえ", exc3:"いいえ", exc4:"いいえ", exc5:"いいえ",
     bw:2180, ga:36, gad:2, chd:"あり", chdName:"心室中隔欠損症", bpd:"なし", vac:"なし", gen:"なし",
-    ue:19.4, tv:12.1, opAge:2, appr:"胸腔鏡", gapMm:12, gapM:"画像評価",
-    extAge:9, extType:"待機的", airw:"なし", cx:"なし", oth:"なし",
-    hot:"なし", dcO2:"なし", hf:"あり", hfS:34, hfE:96, niv:"なし", imv:"なし", rei:"あり", reiS:31, reiE:34,
+    ue:19.4, tv:12.1, birth:"2024-04-01", opAge:"2024-04-03", appr:"胸腔鏡", gapMm:12, gapM:"画像評価",
+    extAge:"2024-04-10", extType:"待機的", airw:"なし", cx:"なし", oth:"なし",
+    hot:"なし", dcO2:"なし", niv:"あり", nivS:"2024-05-05", nivE:"2024-07-06", imv:"なし", rei:"あり", reiS:"2024-05-02", reiE:"2024-05-05",
     trach:"なし", pt:"なし", ao:"なし", death:"なし",
-    cause:"気道虚脱", basis:"気管支鏡所見", adm:1,
+    causeNivMain:"気道虚脱", causeNivBasis:"気管支鏡所見", adm:1,
     bf:"あり", bfM:2, bfF:"呼気時の気管内腔虚脱率 約80%", ct:"なし",
     memo:"操作確認用のサンプルです。削除してからご使用ください。"
   });

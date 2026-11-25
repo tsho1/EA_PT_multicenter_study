@@ -197,6 +197,13 @@ input.bad,select.bad{border-color:var(--crit)}
 /* エピソードの追加・取り消し */
 .seg button.gate-on{color:var(--accent); border-color:var(--accent); font-weight:700}
 .seg button.gate-off{color:var(--muted)}
+/* CPAP/NPPV/HFNCのエピソード見出し */
+.ephead{
+  display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;
+  margin:14px 0 2px; padding:6px 6px 6px 12px; border-radius:8px;
+  background:var(--accent-soft); color:var(--accent-ink); font-size:13px; font-weight:700;
+}
+.ephead .btn{min-height:30px; padding:4px 10px; color:var(--accent-ink)}
 /* 複数選択は選択済みが分かるよう枠を残す */
 .seg.multi button[aria-pressed="true"]::before{content:"✓ "; font-weight:700}
 .seg.multi button{font-size:13px; padding:7px 12px}
@@ -618,6 +625,11 @@ const FIELDS = [];
 SECTIONS.forEach(s => s.fields.forEach(f => {
   FIELDS.push({ sec:s.id, key:f[0], label:f[1], type:f[2], opts:f[3]||null, cond:f[4]||null, ...(f[5]||{}) });
 }));
+/* CPAP/NPPV/HFNCの各エピソードの開始日欄の前に見出しを付ける（nivS→1, nivS2→2 …） */
+FIELDS.forEach(f => {
+  const m = /^nivS(\d?)$/.exec(f.key); if(m) f.epHead = m[1] ? +m[1] : 1;
+  if(f.gate) f.help = "48時間以上の中断をはさんで再導入された場合に追加してください（48時間未満の中断は前のエピソードに通算します）";
+});
 /* 任意項目（空欄でよい項目）。入力の進み具合の計算から外す */
 const OPT_KEYS = ["genD","extDelay","cxD","endR","memo"];
 FIELDS.forEach(f => {
@@ -973,7 +985,14 @@ function renderForm(){
       const body = el("div",{class:"body"});
       if(s.note) body.append(el("div",{class:"note", html:s.note}));
       if(s.figure) body.append(el("figure",{class:"fig", html:s.figure}));
-      s.fields.forEach(fd => { const f = BYKEY[fd[0]]; if(visible(f, r)) body.append(fieldRow(f, r, byKey[fd[0]])); });
+      s.fields.forEach(fd => {
+        const f = BYKEY[fd[0]];
+        if(!visible(f, r)) return;
+        /* 追加済みのエピソードでは「エピソードNの有無」の行は出さない（取り消しは見出しのボタンで行う） */
+        if(f.gate && r[f.key] === "あり") return;
+        if(f.epHead) body.append(episodeHead(f.epHead, r));
+        body.append(fieldRow(f, r, byKey[fd[0]]));
+      });
       card.append(body);
     }
     main.append(card);
@@ -996,10 +1015,25 @@ function renderForm(){
   );
 }
 
+/* CPAP/NPPV/HFNCのエピソード見出し。2件目以降は取り消しボタンを付ける */
+function episodeHead(n, r){
+  const head = el("div",{class:"ephead"}, el("span",{}, "CPAP/NPPV/HFNC エピソード" + n));
+  if(n >= 2){
+    head.append(el("button",{type:"button", class:"btn sm ghost", onclick:()=>{
+      const later = n < 5 ? "以降" : "";
+      const hasData = [n,n+1,n+2,n+3,n+4].filter(i => i <= 5).some(i => r["nivS" + i] || r["nivE" + i]);
+      if(hasData && !confirm("エピソード" + n + later + "の入力内容を消去します。よろしいですか？")) return;
+      nivClear(n - 1).forEach(k => { r[k] = ""; });
+      r["nivMore" + (n - 1)] = "なし"; save(); render();
+    }}, "− このエピソードを取り消す"));
+  }
+  return head;
+}
+
 function fieldRow(f, r, issue){
   const row = el("div",{class:"field" + (f.flag ? " flag" : "")});
   row.append(el("div",{class:"col"}, f.col));
-  const lab = el("div",{class:"lab"}, f.day ? f.label.replace("日齢(日：抜管日)","日（抜管日）").replace("日齢(日)","日") : f.label);
+  const lab = el("div",{class:"lab"}, f.gate ? "さらにエピソードがある場合" : f.day ? f.label.replace("日齢(日：抜管日)","日（抜管日）").replace("日齢(日)","日") : f.label);
   if(f.req) lab.append(el("span",{class:"req"},"*"));
   row.append(lab);
   const ctl = el("div",{class:"ctl"});
